@@ -222,7 +222,7 @@ function getActions() {
   for (const tw of G.weedsOut) if (!tw.dead && Math.abs(p.x - tw.x) < 60) add('E', 'Grab the tumbleweed (kindling)', tw.x, () => { tw.dead = true; p.weeds++; Sound.pickup(); say(pick(['Gotcha, you drifter.', 'Free firewood, delivered by the wind.'])); });
   if (p.cup) add('C', 'Throw tin cup', p.x, throwCup, 999);
   if (!f.can || df >= 85) {
-    if (p.can) add('F', `Eat beans from the can (${canState(p.can)})`, p.x, () => { const c = p.can; p.can = null; eatCan(c, 'pack'); }, 998);
+    if (p.can && p.belly < 60) add('F', `Eat beans from the can (${canState(p.can)})`, p.x, () => { const c = p.can; p.can = null; eatCan(c, 'pack'); }, 998);
     else if (p.jerky > 0) add('F', 'Chew mystery jerky', p.x, () => { p.jerky--; p.belly = clamp(p.belly + 30, 0, 100); Sound.eat(); say(pick(['Tastes like... saddle?', 'Best not to ask what it was.'])); }, 998);
     else if (p.pears > 0) add('F', 'Eat a prickly pear', p.x, () => { p.pears--; p.belly = clamp(p.belly + 14, 0, 100); Sound.eat(); say('Sweet. Spiny. Mostly spiny.'); }, 998);
   }
@@ -698,13 +698,13 @@ function drawClouds(t) {
   const cover = 0.15 + G.storm * 0.85;
   const r = mulberry32(5);
   const dusk = 1 - smooth(60, 200, t);
-  const base = mix(hex('#3a2c40'), hex('#5a3a50'), dusk);
+  const base = mix(hex('#2a2636'), hex('#c87870'), dusk);
   const lit = G.flash;
   for (let i = 0; i < 16; i++) {
     const cx = ((r() * 2400 - G.camX * 0.05 + t * (6 + G.wind * 14) * (0.6 + r())) % 2400 + 2400) % 2400 - 500;
     const cy = 40 + r() * 220;
     const s = 60 + r() * 120;
-    const a = clamp(cover * 1.4 - i * 0.05, 0, 0.9);
+    const a = clamp(cover * 1.4 - i * 0.05, 0, 0.9) * (0.55 + 0.45 * G.storm);
     if (a <= 0) continue;
     const col = mix(base, hex('#c8d0ff'), lit * 0.5);
     ctx.fillStyle = rgb(col, a);
