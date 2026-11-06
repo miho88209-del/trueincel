@@ -1213,7 +1213,7 @@ document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement === canvas) hadLock = true;
   else if (hadLock && mode === 'play') { hadLock = false; pause(); }
 });
-function pause() { if (mode !== 'play') return; mode = 'paused'; $('pause').classList.remove('hidden'); Sound.setAmbience(0, 400, 0, 0); syncSettingsUI(); }
+function pause() { if (mode !== 'play') return; mode = 'paused'; hadLock = false; if (document.pointerLockElement) document.exitPointerLock(); $('pause').classList.remove('hidden'); Sound.setAmbience(0, 400, 0, 0); syncSettingsUI(); }
 function resume() { if (mode !== 'paused') return; mode = 'play'; $('pause').classList.add('hidden'); last = performance.now(); canvas.click(); }
 addEventListener('keydown', e => {
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
