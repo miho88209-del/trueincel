@@ -6,45 +6,85 @@
 <title>The Last Can of Beans</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="game" width="1280" height="720"></canvas>
+<div id="view"></div>
 
-  <div id="title" class="overlay">
-    <div class="card">
-      <div class="eyebrow">Coffin Rock Canyon &middot; One Stormy Night</div>
-      <h1>The Last Can<br>of Beans</h1>
-      <p class="tag">You're broke. Your horse is judgmental. Dinner is one dented can.<br>Survive till sunrise.</p>
-      <button id="startBtn">Press Enter to Ride</button>
-      <div class="controls">
-        <span><b>A/D</b> or <b>&larr;/&rarr;</b> walk</span>
-        <span><b>Shift</b> hurry</span>
-        <span><b>E</b> use / gather / feed fire</span>
-        <span><b>B</b> heat beans</span>
-        <span><b>F</b> eat</span>
-        <span><b>C</b> throw tin cup</span>
-        <span><b>S</b> / <b>&darr;</b> crouch</span>
-        <span><b>P</b> pause &middot; <b>M</b> mute &middot; <b>R</b> restart</span>
-      </div>
-    </div>
+<div id="hud" class="hidden">
+  <div id="panel">
+    <div id="clockrow"><span id="clock">7:00 PM</span><span id="phase"></span></div>
+    <div class="bar"><label data-i18n="hud_warmth"></label><div class="track"><div id="b_warmth" class="fill warm"></div></div></div>
+    <div class="bar"><label data-i18n="hud_belly"></label><div class="track"><div id="b_belly" class="fill belly"></div></div></div>
+    <div class="bar"><label data-i18n="hud_dry"></label><div class="track"><div id="b_dry" class="fill dry"></div></div></div>
+    <div class="bar"><label data-i18n="hud_fire"></label><div class="track"><div id="b_fire" class="fill fire"></div></div></div>
+    <div id="inv"></div>
+    <div id="status"></div>
   </div>
+  <div id="toasts"></div>
+  <div id="markers"></div>
+  <div id="say" class="hidden"></div>
+  <div id="prompts"></div>
+  <div id="lookhint" data-i18n="click_to_look"></div>
+  <div id="frost"></div>
+</div>
 
-  <div id="end" class="overlay hidden">
-    <div class="card">
-      <div class="eyebrow" id="endEyebrow"></div>
-      <h1 id="endTitle"></h1>
-      <p class="tag" id="endText"></p>
-      <ul id="endStats"></ul>
-      <button id="againBtn">Press Enter or R to Ride Again</button>
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="eyebrow" data-i18n="title_eyebrow"></div>
+    <h1 data-i18n="title_name"></h1>
+    <p class="tag" data-i18n="title_tag"></p>
+    <div class="langrow"><span data-i18n="title_language"></span>
+      <button class="langbtn" data-lang="en">English</button><button class="langbtn" data-lang="fr">Français</button><button class="langbtn" data-lang="ru">Русский</button>
     </div>
-  </div>
-
-  <div id="pause" class="overlay hidden">
-    <div class="card small"><h2>Paused</h2><p class="tag">Press P or Esc to keep surviving.</p></div>
+    <button id="startBtn" class="big" data-i18n="title_start"></button>
+    <div class="controls">
+      <span data-i18n="ctl_move"></span><span data-i18n="ctl_look"></span><span data-i18n="ctl_sprint"></span>
+      <span data-i18n="ctl_use"></span><span data-i18n="ctl_eat"></span><span data-i18n="ctl_cup"></span>
+      <span data-i18n="ctl_crouch"></span><span data-i18n="ctl_pause"></span><span data-i18n="ctl_mute"></span>
+    </div>
+    <p class="hint" data-i18n="title_hint"></p>
   </div>
 </div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <h2 data-i18n="pause_title"></h2>
+    <div class="btnrow"><button id="resumeBtn" class="big" data-i18n="pause_resume"></button><button id="restartBtn" data-i18n="pause_restart"></button></div>
+    <div class="langrow"><span data-i18n="title_language"></span>
+      <button class="langbtn" data-lang="en">English</button><button class="langbtn" data-lang="fr">Français</button><button class="langbtn" data-lang="ru">Русский</button>
+    </div>
+    <div class="settings">
+      <h3 data-i18n="pause_settings"></h3>
+      <label><span data-i18n="set_sensitivity"></span><input id="sens" type="range" min="0.2" max="3" step="0.1"></label>
+      <label><span data-i18n="set_volume"></span><input id="vol" type="range" min="0" max="1" step="0.05"></label>
+      <label><span data-i18n="set_invert"></span><button id="invertBtn"></button></label>
+    </div>
+    <div class="controls">
+      <span data-i18n="ctl_move"></span><span data-i18n="ctl_look"></span><span data-i18n="ctl_sprint"></span>
+      <span data-i18n="ctl_use"></span><span data-i18n="ctl_eat"></span><span data-i18n="ctl_cup"></span>
+      <span data-i18n="ctl_crouch"></span><span data-i18n="ctl_mute"></span>
+    </div>
+  </div>
+</div>
+
+<div id="end" class="overlay hidden">
+  <div class="card">
+    <div class="eyebrow" id="endEyebrow"></div>
+    <h1 id="endTitle"></h1>
+    <p class="tag" id="endText"></p>
+    <ul id="endStats"></ul>
+    <button id="againBtn" class="big" data-i18n="end_again"></button>
+  </div>
+</div>
+
+<div id="loading" class="overlay"><div class="card small"><p class="tag" data-i18n="loading"></p></div></div>
+
 <script src="js/audio.js"></script>
-<script src="js/game.js"></script>
+<script src="js/lang/en.js"></script>
+<script src="js/lang/fr.js"></script>
+<script src="js/lang/ru.js"></script>
+<script src="js/i18n.js"></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>

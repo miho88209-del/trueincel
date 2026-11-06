@@ -3,14 +3,14 @@
 const Sound = (() => {
   let ac = null, master, noiseBuf, brownBuf;
   let windGain, windFilter, rainGain, fireGain, musicGain;
-  let muted = false;
+  let muted = false, volume = 0.7;
 
   function init() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     try { ac = new AC(); } catch (e) { ac = null; return; }
-    master = ac.createGain(); master.gain.value = 0.7; master.connect(ac.destination);
+    master = ac.createGain(); master.gain.value = muted ? 0 : volume; master.connect(ac.destination);
     const sr = ac.sampleRate;
     noiseBuf = ac.createBuffer(1, sr * 2, sr);
     const d = noiseBuf.getChannelData(0);
@@ -84,7 +84,10 @@ const Sound = (() => {
   return {
     init,
     get ready() { return !!ac; },
-    toggleMute() { muted = !muted; if (ac) master.gain.setTargetAtTime(muted ? 0 : 0.7, ac.currentTime, 0.05); return muted; },
+    toggleMute() { muted = !muted; if (ac) master.gain.setTargetAtTime(muted ? 0 : volume, ac.currentTime, 0.05); return muted; },
+    setVolume(v) { volume = v; if (ac) master.gain.setTargetAtTime(muted ? 0 : volume, ac.currentTime, 0.05); },
+    hiss() { noise({ dur: 1.2, freq: 5000, freqEnd: 2500, q: 0.6, vol: 0.25, attack: 0.05 }); },
+    step(wet) { noise({ dur: 0.07, freq: wet ? 1400 : 700, q: 1.2, vol: wet ? 0.05 : 0.035 }); },
     setAmbience,
     crackle(vol = 0.12) { noise({ dur: 0.04 + Math.random() * 0.05, freq: 1500 + Math.random() * 3000, q: 2, vol }); },
     thunder(vol = 0.9) {
@@ -127,3 +130,4 @@ const Sound = (() => {
     },
   };
 })();
+window.Sound = Sound;
