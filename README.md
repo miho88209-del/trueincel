@@ -8,13 +8,15 @@ The game is plain HTML/CSS/JavaScript with [Three.js](https://threejs.org) r187 
 
 ## Launch (Linux)
 
-You need Python 3 (preinstalled on almost every Linux distribution). From this folder, run:
+You need Git and Python 3 (preinstalled on almost every Linux distribution). Run:
 
 ```bash
+git clone -b hoplite/tenos-e3cc2bbf https://github.com/miho88209-del/trueincel.git
+cd trueincel
 python3 -m http.server 8000
 ```
 
-Or use the included script, which does the same thing:
+If you already have the folder, just run the last command from inside it. Or use the included script, which does the same thing:
 
 ```bash
 ./start.sh
