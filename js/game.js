@@ -1229,6 +1229,13 @@ function drawHUD(acts) {
     ctx.font = 'bold 16px Georgia'; ctx.textAlign = left ? 'left' : 'right';
     ctx.fillText(left ? '◀ camp' : 'camp ▶', left ? 16 : W - 16, BASE_Y - 140);
   }
+  // off-screen markers for things you probably want back
+  ctx.font = 'bold 14px Georgia';
+  [[G.hatObj && G.hatObj.landed ? G.hatObj.x : null, 'hat'], [G.cupObj && G.cupObj.landed ? G.cupObj.x : null, 'cup'], [G.groundCan ? G.groundCan.x : null, 'beans']].forEach(([x, name], i) => {
+    if (x === null) return; const s2 = sx(x); if (s2 >= 0 && s2 <= W) return;
+    const left = s2 < 0; ctx.textAlign = left ? 'left' : 'right'; ctx.fillStyle = '#9ad0ff';
+    ctx.fillText(left ? '◀ your ' + name : 'your ' + name + ' ▶', left ? 16 : W - 16, BASE_Y - 112 + i * 22);
+  });
   // footer controls
   ctx.textAlign = 'left'; ctx.font = '12px Georgia'; ctx.fillStyle = 'rgba(243,226,194,0.6)';
   ctx.fillText('A/D move · Shift hurry · E use · B heat beans · F eat · C throw cup · S crouch · P pause · M mute · R restart', 16, H - 12);
