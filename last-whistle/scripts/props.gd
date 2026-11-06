@@ -22,6 +22,12 @@ static func fonts() -> void:
 	if font_hand == null:
 		font_hand = load("res://fonts/Caveat.ttf")
 		font_type = load("res://fonts/SpecialElite-Regular.ttf")
+		# Cyrillic (PT Mono) and Simplified Chinese (subset fonts) fallbacks
+		var zh_hand: Font = load("res://fonts/MaShanZheng-zh.ttf")
+		var zh_type: Font = load("res://fonts/NotoSerifSC-zh.ttf")
+		var cyr_type: Font = load("res://fonts/PTMono-Regular.ttf")
+		font_hand.fallbacks = [zh_hand, zh_type]
+		font_type.fallbacks = [cyr_type, zh_type]
 
 static func cached(key: String, builder: Callable) -> Mesh:
 	if not _mesh_cache.has(key):
@@ -472,7 +478,8 @@ static func sign_post(text: String) -> Node3D:
 	mk.boxp("wood", Vector3(0, 1.1, 0), Vector3(0.12, 2.2, 0.12), WOOD_D, 0.0, true)
 	mk.boxp("wood", Vector3(0, 2.0, 0.08), Vector3(1.9, 0.55, 0.05), Color(0.5, 0.48, 0.44))
 	mk.build(root, "Sign", true)
-	var l := label(text, 72, Color(0.08, 0.07, 0.06), false, 0.0055)
+	var l := label(Loc.t(text), 72, Color(0.08, 0.07, 0.06), false, 0.0055)
+	Loc.bind(l, text)
 	l.position = Vector3(0, 2.0, 0.112)
 	l.width = 330
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
