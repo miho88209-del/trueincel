@@ -1245,10 +1245,11 @@ function drawHUD(acts) {
 let last = performance.now();
 let titleT = 25;
 function frame(now) {
-  const rawDt = Math.min(0.05, (now - last) / 1000); last = now;
+  // Up to 0.25s per frame, split into <=50ms sim steps, so slow machines keep real-time pace.
+  const rawDt = Math.min(0.25, (now - last) / 1000); last = now;
   if (mode === 'play') {
-    const steps = Math.ceil(SPEED);
-    for (let i = 0; i < steps && mode === 'play'; i++) update(rawDt * SPEED / steps);
+    const simDt = rawDt * SPEED, steps = Math.max(1, Math.ceil(simDt / 0.05));
+    for (let i = 0; i < steps && mode === 'play'; i++) update(simDt / steps);
     const acts = getActions();
     for (const k of ['E', 'B', 'F', 'C']) {
       if (pressed['Key' + k]) { const a = acts.filter(x => x.key === k && x.fn).sort((x, y) => x.d - y.d)[0]; if (a) a.fn(); }
@@ -1258,7 +1259,7 @@ function frame(now) {
     titleT += rawDt;
     G.t = 20 + Math.sin(titleT * 0.05) * 15; G.camX = 600 + Math.sin(titleT * 0.08) * 300;
     G.storm = 0; G.dark = 0.08; G.wind = 0.3 + Math.sin(titleT) * 0.1;
-    updObjects(rawDt); updParticles(rawDt);
+    updObjects(Math.min(rawDt, 0.05)); updParticles(Math.min(rawDt, 0.05));
     render();
   } else if (mode === 'paused' || mode === 'won' || mode === 'lost') {
     if (mode === 'won' && G.t < 575) { G.t += rawDt * 4; G.storm = 0; G.night = 0; G.dark = 0.08; G.rain.length = 0; }
