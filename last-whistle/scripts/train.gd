@@ -149,7 +149,7 @@ func _ladder(car: AnimatableBody3D, x: float, z: float, mk: MK) -> void:
 		"exit": Vector3(x - s * 0.55, FLOOR + 0.05, z), "out": Vector3(s, 0, 0)})
 	car.add_child(area)
 	Interactable.make(car, Vector3(x + s * 0.05, FLOOR - 0.3, z), Vector3(0.25, 1.4, 0.6),
-		func() -> String: return "[E] Climb the ladder   (or walk into it holding W)",
+		func() -> String: return Loc.t("p_ladder"),
 		func(p) -> void: p.start_climb(area))
 
 func _build_loco(body: AnimatableBody3D) -> void:
@@ -276,10 +276,12 @@ func _build_loco(body: AnimatableBody3D) -> void:
 	# gauges
 	speed_needle = _needle(body, Vector3(0.45, FLOOR + 1.55, 1.6))
 	pressure_needle = _needle(body, Vector3(-0.45, FLOOR + 1.55, 1.6))
-	var lbl1 := Props.label("SPEED", 28, Color(0.75, 0.7, 0.6), false, 0.0025)
+	var lbl1 := Props.label(Loc.t("lbl_speed"), 28, Color(0.75, 0.7, 0.6), false, 0.0025)
+	Loc.bind(lbl1, "lbl_speed")
 	lbl1.position = Vector3(0.45, FLOOR + 1.3, 1.6)
 	body.add_child(lbl1)
-	var lbl2 := Props.label("STEAM", 28, Color(0.75, 0.7, 0.6), false, 0.0025)
+	var lbl2 := Props.label(Loc.t("lbl_steam"), 28, Color(0.75, 0.7, 0.6), false, 0.0025)
+	Loc.bind(lbl2, "lbl_steam")
 	lbl2.position = Vector3(-0.45, FLOOR + 1.3, 1.6)
 	body.add_child(lbl2)
 	# regulator
@@ -291,7 +293,8 @@ func _build_loco(body: AnimatableBody3D) -> void:
 	rmk.boxp("metal", Vector3(0, -0.22, 0.08), Vector3(0.05, 0.45, 0.04), Color(0.45, 0.45, 0.45))
 	rmk.boxp("wood", Vector3(0, -0.45, 0.12), Vector3(0.07, 0.12, 0.12), Color(0.35, 0.12, 0.1))
 	rmk.build(regulator, "Reg", false)
-	var reg_lbl := Props.label("REGULATOR", 24, Color(0.75, 0.7, 0.6), false, 0.0022)
+	var reg_lbl := Props.label(Loc.t("lbl_regulator"), 24, Color(0.75, 0.7, 0.6), false, 0.0022)
+	Loc.bind(reg_lbl, "lbl_regulator")
 	reg_lbl.position = Vector3(0.62, FLOOR + 1.2, 1.6)
 	body.add_child(reg_lbl)
 	Interactable.make(body, Vector3(0.62, FLOOR + 0.85, 1.75), Vector3(0.4, 0.6, 0.3), _regulator_prompt, func(_p) -> void: set_notch(throttle + 1), func(_p) -> void: set_notch(throttle - 1))
@@ -303,7 +306,8 @@ func _build_loco(body: AnimatableBody3D) -> void:
 	bmk.boxp("metal", Vector3(0, 0.3, 0), Vector3(0.05, 0.6, 0.05), Color(0.45, 0.45, 0.45))
 	bmk.boxp("wood", Vector3(0, 0.62, 0), Vector3(0.1, 0.1, 0.14), Color(0.35, 0.12, 0.1))
 	bmk.build(brake_lever, "Brake", false)
-	var brk_lbl := Props.label("BRAKE", 26, Color(0.75, 0.7, 0.6), false, 0.0025)
+	var brk_lbl := Props.label(Loc.t("lbl_brake"), 26, Color(0.75, 0.7, 0.6), false, 0.0025)
+	Loc.bind(brk_lbl, "lbl_brake")
 	brk_lbl.position = Vector3(-1.34, FLOOR + 1.0, 2.6)
 	brk_lbl.rotation.y = PI / 2
 	body.add_child(brk_lbl)
@@ -326,7 +330,7 @@ func _build_loco(body: AnimatableBody3D) -> void:
 	axe_prop.rotation = Vector3(0.3, PI / 2, 0)
 	body.add_child(axe_prop)
 	Interactable.make(body, Vector3(-1.2, FLOOR + 1.2, 3.75), Vector3(0.35, 0.8, 0.5),
-		func() -> String: return "[E] Take the axe" if axe_prop.visible else "",
+		func() -> String: return Loc.t("p_take_axe") if axe_prop.visible else "",
 		func(p) -> void:
 			if axe_prop.visible:
 				axe_prop.visible = false
@@ -489,7 +493,8 @@ func _build_tender(body: AnimatableBody3D) -> void:
 	coal_pile.add_child(pile)
 	Interactable.make(body, Vector3(0, FLOOR + 0.6, -2.1), Vector3(1.3, 0.8, 0.4), _bunker_prompt, func(p) -> void: deposit(p))
 	Interactable.make(body, Vector3(0, FLOOR + 1.0, -0.6), Vector3(1.3, 0.4, 3.0), _bunker_prompt, func(p) -> void: deposit(p))
-	var lbl := Props.label("COAL", 40, Color(0.7, 0.68, 0.62), false, 0.004)
+	var lbl := Props.label(Loc.t("lbl_coal"), 40, Color(0.7, 0.68, 0.62), false, 0.004)
+	Loc.bind(lbl, "lbl_coal")
 	lbl.position = Vector3(0, FLOOR + 0.25, -2.16)
 	lbl.rotation.y = 0.0
 	body.add_child(lbl)
@@ -611,25 +616,25 @@ func _build_carriage(body: AnimatableBody3D) -> void:
 # ------------------------------------------------------------------ controls
 
 func _regulator_prompt() -> String:
-	return "Regulator %d/%d   [E] Open   [Q] Close" % [throttle, MAX_NOTCH]
+	return Loc.t("p_regulator") % [throttle, MAX_NOTCH]
 
 func _brake_prompt() -> String:
-	return "[E] Release the brake" if brake else "[E] Apply the brake"
+	return Loc.t("p_brake_release") if brake else Loc.t("p_brake_apply")
 
 func _whistle_prompt() -> String:
-	return "[E] Pull the whistle" if pressure > 0.15 else "Whistle (needs steam pressure)"
+	return Loc.t("p_whistle") if pressure > 0.15 else Loc.t("p_whistle_nosteam")
 
 func _firebox_prompt() -> String:
 	if tender_coal <= 0:
-		return "Firebox — the tender is empty. Find coal."
+		return Loc.t("p_firebox_empty")
 	if fire > 92.0:
-		return "Firebox — the fire is roaring"
-	return "[E] Shovel coal into the firebox   (%d left)" % tender_coal
+		return Loc.t("p_firebox_full")
+	return Loc.t("p_firebox") % tender_coal
 
 func _bunker_prompt() -> String:
 	if world and world.player and world.player.carried_coal > 0:
-		return "[E] Tip %d coal into the tender" % world.player.carried_coal
-	return "Coal bunker — %d shovelfuls left" % tender_coal
+		return Loc.t("p_bunker_tip") % world.player.carried_coal
+	return Loc.t("p_bunker") % tender_coal
 
 func set_notch(n: int) -> void:
 	var nn := clampi(n, 0, MAX_NOTCH)
@@ -638,9 +643,9 @@ func set_notch(n: int) -> void:
 	throttle = nn
 	Sfx.play_at("lever", Vector3.ZERO, -4.0, randf_range(0.9, 1.1), 20.0, snd_cab)
 	if throttle > 0 and pressure < 0.2:
-		world.hud.message("Not enough steam. Feed the fire and wait for pressure.", 3.0)
+		world.hud.message(Loc.t("m_no_steam"), 3.0)
 	elif throttle > 0 and brake:
-		world.hud.message("The brake is still on.", 2.5)
+		world.hud.message(Loc.t("m_brake_on"), 2.5)
 
 func toggle_brake() -> void:
 	brake = not brake
@@ -673,12 +678,12 @@ func deposit(p) -> void:
 	var room := TENDER_MAX - tender_coal
 	var n := mini(room, p.carried_coal)
 	if n <= 0:
-		world.hud.message("The tender is full.", 2.0)
+		world.hud.message(Loc.t("m_tender_full"), 2.0)
 		return
 	tender_coal += n
 	p.carried_coal -= n
 	Sfx.play("coal_pickup", 0.0, 0.85)
-	world.hud.message("+%d coal in the tender" % n, 2.0)
+	world.hud.message(Loc.t("m_coal_added") % n, 2.0)
 	_update_coal_pile()
 
 func _update_coal_pile() -> void:
@@ -731,7 +736,7 @@ func _physics_process(dt: float) -> void:
 			if not brake:
 				brake = true
 				throttle = 0
-				world.hud.message("Nobody at the controls. The brake engages.", 3.0)
+				world.hud.message(Loc.t("m_deadman"), 3.0)
 	# approach to Greyhaven buffers
 	if d > Track.END_D - 140.0 and auto_brake_reason == "":
 		# rolling into Greyhaven: shut the regulator and brake at the platform
@@ -739,7 +744,7 @@ func _physics_process(dt: float) -> void:
 		throttle = 0
 		brake = true
 		if world:
-			world.hud.message("Greyhaven! The brakes bite as you roll into the station.", 4.0)
+			world.hud.message(Loc.t("m_station"), 4.0)
 	if auto_brake_reason == "station" and v > 1.0:
 		a = minf(a, -3.0)
 	v = maxf(0.0, v + a * dt)

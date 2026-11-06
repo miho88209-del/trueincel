@@ -27,6 +27,7 @@ var v := {
 	"window_mode": 1, "resolution": 3, "vsync": true,
 	"master": 0.85, "music": 0.7, "sfx": 0.9, "ambience": 0.8,
 	"sensitivity": 0.22, "fov": 75.0, "invert_y": false,
+	"language": "en",
 }
 
 func _ready() -> void:
@@ -38,6 +39,7 @@ func _ready() -> void:
 func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) != OK:
+		v["language"] = preload("res://scripts/loc.gd").detect()
 		return
 	for k in v.keys():
 		if cfg.has_section_key("settings", k):

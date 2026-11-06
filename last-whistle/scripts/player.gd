@@ -140,14 +140,14 @@ func give_axe() -> void:
 	has_axe = true
 	axe_view.visible = true
 	Sfx.play("pickup", 0.0, 0.8)
-	world.hud.message("Axe taken. [Left Mouse] to swing.", 3.5)
+	world.hud.message(Loc.t("m_axe"), 3.5)
 
 func give_lantern() -> void:
 	has_lantern = true
 	lantern_on = true
 	lantern_view.visible = true
 	Sfx.play("pickup")
-	world.hud.message("Storm lantern. [F] to cover or uncover it.", 3.5)
+	world.hud.message(Loc.t("m_lantern"), 3.5)
 
 func add_shake(a: float) -> void:
 	_shake = maxf(_shake, a)
