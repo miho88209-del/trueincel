@@ -6,6 +6,8 @@ You wake alone in a cold, fog-bound forest beside an old steam locomotive. The o
 
 A full run takes about 15–25 minutes.
 
+**Languages:** English, Español, Русский and 简体中文. Choose one in **Settings → language**; the change applies immediately and is saved. On the first launch the game picks your Windows display language if it is one of these.
+
 ## Launch (Windows)
 
 1. Unzip `TheLastWhistle-windows.zip` anywhere.
@@ -44,6 +46,7 @@ Settings are saved to `%APPDATA%\Godot\app_userdata\The Last Whistle\settings.cf
 - display mode, resolution and V-Sync
 - master, music, effects and ambience volume
 - mouse sensitivity, field of view and invert Y
+- language
 
 ## Project
 
@@ -58,7 +61,9 @@ The `last-whistle/` folder is a standard Godot 4.7.2 project. To open it, start 
 | `scripts/chunk.gd`, `track.gd` | Streamed 80 m terrain/forest/track sections and the route definition |
 | `scripts/props.gd`, `mk.gd`, `mats.gd` | Procedural low-poly models and PBR materials/shaders |
 | `scripts/menu.gd`, `settings_panel.gd`, `hud.gd`, `settings.gd`, `audio.gd`, `game.gd` | Menu, settings, HUD and global services |
+| `scripts/loc.gd`, `i18n/*.json` | Localisation service and the string tables (`en`, `es`, `ru`, `zh`) |
 | `scripts/autotest.gd` | Automated playthrough used to verify the build |
+| `tools/subset_fonts.py` | Rebuilds the small Chinese fallback fonts from the characters in `i18n/zh.json`. Run it after editing Chinese text (`python3 tools/subset_fonts.py`, needs fonttools) |
 | `tools/gen_audio.py` | Synthesizes every sound and music track in `audio/` (`python3 tools/gen_audio.py`, needs numpy, scipy and ffmpeg) |
 
 ### Rebuild the Windows executable
@@ -75,7 +80,7 @@ godot --headless --export-release "Windows Desktop" build/windows/TheLastWhistle
 godot --path . -- --autotest
 ```
 
-This plays through the menu, settings, intro, ladder, furnace, travel, a stop, the axe, the creature, coal, the whistle, arrival, retry and death. It prints `PASS`/`FAIL` lines and saves screenshots to the user data folder, or to the folder set by the `LW_SHOTS` environment variable.
+This plays through the menu, settings, language switching, intro, ladder, furnace, travel, a stop, the axe, the creature, coal, the whistle, arrival, retry and death. It prints `PASS`/`FAIL` lines and saves screenshots to the user data folder, or to the folder set by the `LW_SHOTS` environment variable. `-- --autotest=lang` captures the menu, settings, a note, the HUD and the pause menu in every language.
 
 ## Credits
 
@@ -85,5 +90,8 @@ Fonts:
 
 - *Caveat* by Impallari Type, SIL Open Font License (`fonts/OFL.txt`)
 - *Special Elite* by Astigmatic, Apache License 2.0 (`fonts/LICENSE.txt`)
+- *PT Mono* by ParaType, SIL Open Font License (`fonts/OFL-PTMono.txt`), for Cyrillic typewriter text
+- *Ma Shan Zheng* by Ma ShanZheng, SIL Open Font License (`fonts/OFL-MaShanZheng.txt`), subset, for Chinese handwriting
+- *Noto Serif SC* by Google, SIL Open Font License (`fonts/OFL-NotoSerifSC.txt`), subset, for Chinese print text
 
 Engine: [Godot Engine](https://godotengine.org), MIT license.

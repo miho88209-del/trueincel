@@ -2,18 +2,7 @@ extends Node3D
 ## Game world: environment, route sites, streaming, objectives, story, audio
 ## states, checkpoints, the awakening intro and the win / lose states.
 
-const NOTES := {
-	"engine": ["pinned beside the engine's ladder", "To whoever wakes up next —\n\nShe still has fire in her. Shovel coal into the firebox, wait for the steam needle to climb, let off the brake and open the regulator.\n\nGreyhaven is down the line, east. Tell them what happened to the 7:10 from Ashford.\n\nDon't stay off the train for long. If you see the tall one with the paper face, LOOK AT IT. It only moves when you look away.\n\nThe whistle hurts it.\n\n— M."],
-	"carriage": ["passenger list, carriage two", "7:10 Ashford – Greyhaven. 23 aboard.\n\n9:40  stopped. Tree across the line.\n9:52  driver and fireman went out with the axe.\n10:05  the whistle stopped.\n\nPeople kept getting off to look for them. Nobody came back.\nI am the last one awake. I am going to try the engine myself.\n\n— M."],
-	"shack": ["scratched into the wall planks", "It stood by the window all night.\nEvery time I blinked it was closer.\n\nI stared until morning. My eyes burned.\nIt was still there when the light came, just standing, like a coat on a hook.\n\nI'm going to run for the line."],
-	"hut": ["a trapper's ledger", "Third tree down on the Ashford line this month. No wind. No rot.\nThe trunks are snapped clean at the bottom, like something wants the trains to stop.\n\nLeft my winter coal in the hut. If you need it, take it."],
-	"wreck": ["on the back of a ticket", "This carriage never made it.\nSomebody wrote on every seat: DON'T LOOK BACK.\n\nBut you have to look back. That's the trick of it.\nIt can't move while you're watching."],
-	"signalbox": ["signalman's log", "Line closed since the 3rd.\nSignals set to danger at every fallen tree.\n\nThe tall one comes to the box at night and stands under the lamp. It doesn't like the engines, I think. The noise of them.\n\nStove coal is in the corner. Greyhaven is a little over two kilometres on."],
-	"notetree": ["notes tied to the branches", "i looked away\n\nit was smiling\n\nthe whistle hurts it\n\nkeep the fire lit\n\nit counts us\n\ndon't look back.   LOOK BACK.\n\ngreyhaven  greyhaven  greyhaven"],
-	"barn": ["a letter tucked in a coal sack", "M. —\n\nI kept the coal dry for you, like I promised.\nIf I hear the whistle tonight I'll know you made it through.\nThe lamps at Greyhaven will be lit.\n\n— your sister, Ada"],
-	"ruin": ["a prayer card", "Whoever finds this:\nthe thing in the woods is patient, not fast.\n\nWalk backwards if you must, but keep your eyes on it.\nIt hates the engine's scream."],
-	"post": ["nailed to a telegraph pole", "DON'T LOOK AWAY\n\n(someone has added underneath, in pencil:)\nunless you're running"],
-}
+const NOTE_IDS := ["engine", "carriage", "shack", "hut", "wreck", "signalbox", "notetree", "barn", "ruin", "post"]
 
 var train: Train
 var player: Player
@@ -74,7 +63,7 @@ func _ready() -> void:
 	train.started.connect(func() -> void:
 		if not started_once:
 			started_once = true
-			hud.message("She's moving.", 2.5))
+			hud.message(Loc.t("m_moving"), 2.5))
 	Settings.changed.connect(_apply_settings)
 	_apply_settings()
 	var restoring := Game.start_mode == "retry" and not Game.checkpoint.is_empty()
@@ -310,7 +299,7 @@ func _build_sites() -> void:
 		var pp := Track.side(dd, -5.55, 1.5)
 		_add_to_world(n, pp, Basis(Vector3.RIGHT, PI / 2).rotated(Vector3.UP, atan2(-Track.right(dd).x, -Track.right(dd).z)))
 	# signs
-	for sg in [[2000.0 - 300.0, "GREYHAVEN  3 km"], [3680.0, "GREYHAVEN  1 km"], [4450.0, "GREYHAVEN"]]:
+	for sg in [[2000.0 - 300.0, "sign_3km"], [3680.0, "sign_1km"], [4450.0, "sign_town"]]:
 		var sp := Props.sign_post(sg[1])
 		_add_to_world(sp, Track.side(sg[0], 4.2), Basis.looking_at(-Track.fwd(sg[0]), Vector3.UP))
 	# signals
@@ -332,26 +321,26 @@ func _build_sites() -> void:
 	np.position = Vector3(1.47, Train.FLOOR - 0.25, 3.75)
 	np.rotation = Vector3(0, 0, -PI / 2)
 	loco.add_child(np)
-	Interactable.make(loco, Vector3(1.55, Train.FLOOR - 0.25, 3.75), Vector3(0.25, 0.4, 0.35), func() -> String: return "[E] Read the note", func(_p) -> void: read_note("engine"))
+	Interactable.make(loco, Vector3(1.55, Train.FLOOR - 0.25, 3.75), Vector3(0.25, 0.4, 0.35), func() -> String: return Loc.t("p_read_note"), func(_p) -> void: read_note("engine"))
 	var car: Node3D = train.cars["carriage"]
 	var cn := MeshInstance3D.new()
 	cn.mesh = Props.note_mesh()
 	cn.position = Vector3(0.85, Train.FLOOR + 0.79, 4.9)
 	cn.rotation.y = 0.3
 	car.add_child(cn)
-	Interactable.make(car, Vector3(0.85, Train.FLOOR + 0.85, 4.9), Vector3(0.5, 0.25, 0.5), func() -> String: return "[E] Read the passenger list", func(_p) -> void: read_note("carriage"))
+	Interactable.make(car, Vector3(0.85, Train.FLOOR + 0.85, 4.9), Vector3(0.5, 0.25, 0.5), func() -> String: return Loc.t("p_read_list"), func(_p) -> void: read_note("carriage"))
 	var kit := MeshInstance3D.new()
 	kit.mesh = Props.medkit_mesh()
 	kit.position = Vector3(1.1, Train.FLOOR + 0.78, 5.1)
 	car.add_child(kit)
 	Interactable.make(car, Vector3(1.1, Train.FLOOR + 0.9, 5.1), Vector3(0.5, 0.3, 0.4),
-		func() -> String: return "[E] Use the first-aid tin" if kit.visible and player.health < 100.0 else ("First-aid tin (you're unhurt)" if kit.visible else ""),
+		func() -> String: return Loc.t("p_firstaid_use") if kit.visible and player.health < 100.0 else (Loc.t("p_firstaid_unhurt") if kit.visible else ""),
 		func(_p) -> void:
 			if kit.visible and player.health < 100.0:
 				kit.visible = false
 				collected["kit_carriage"] = true
 				player.heal(70.0)
-				hud.message("You patch yourself up.", 2.5))
+				hud.message(Loc.t("m_patched"), 2.5))
 	kit.set_meta("id", "kit_carriage")
 	pickups["kit_carriage"] = {"node": kit, "kind": "kit", "amount": 0, "pos": Vector3.ZERO}
 	# travel glimpses
@@ -385,10 +374,10 @@ func _pickup(id: String, kind: String, amount: int, pos: Vector3) -> void:
 	var size := Vector3(0.8, 0.9, 0.8) if kind == "coal" else Vector3(0.5, 0.5, 0.5)
 	Interactable.make(node, Vector3(0, size.y * 0.5, 0), size, func() -> String:
 		match kind:
-			"coal": return "[E] Pick up a sack of coal (%d)" % amount if player.carried_coal + amount <= Player.MAX_CARRY else "You can't carry any more coal"
-			"bandage": return "[E] Take the bandages"
-			"medkit": return "[E] Take the first-aid kit"
-			"lantern": return "[E] Take the storm lantern"
+			"coal": return Loc.t("p_coal_sack") % amount if player.carried_coal + amount <= Player.MAX_CARRY else Loc.t("p_coal_full")
+			"bandage": return Loc.t("p_bandage")
+			"medkit": return Loc.t("p_medkit")
+			"lantern": return Loc.t("p_lantern")
 		return "", func(_p) -> void: _collect(id))
 	pickups[id] = {"node": node, "kind": kind, "amount": amount, "pos": pos}
 
@@ -400,13 +389,13 @@ func _collect(id: String) -> void:
 				return
 			player.carried_coal += pk["amount"]
 			Sfx.play("coal_pickup")
-			hud.message("Coal +%d. Carry it back and tip it into the tender." % pk["amount"], 3.0)
+			hud.message(Loc.t("m_coal_pick") % pk["amount"], 3.0)
 		"bandage":
 			player.heal(35.0)
-			hud.message("Bandages. You feel steadier.", 2.5)
+			hud.message(Loc.t("m_bandage"), 2.5)
 		"medkit":
 			player.heal(80.0)
-			hud.message("First-aid kit.", 2.5)
+			hud.message(Loc.t("m_medkit"), 2.5)
 		"lantern":
 			player.give_lantern()
 	collected[id] = true
@@ -422,11 +411,11 @@ func _note(id: String, pos: Vector3, show_mesh := true, size := Vector3(0.5, 0.4
 		mi.position.y = 0.01
 		mi.rotation.y = randf() * TAU
 		node.add_child(mi)
-	Interactable.make(node, Vector3(0, 0.1, 0), size, func() -> String: return "[E] Read", func(_p) -> void: read_note(id))
+	Interactable.make(node, Vector3(0, 0.1, 0), size, func() -> String: return Loc.t("p_read"), func(_p) -> void: read_note(id))
 
 func read_note(id: String) -> void:
 	notes_read[id] = true
-	hud.show_note(NOTES[id][0], NOTES[id][1])
+	hud.show_note(Loc.t("note_%s_title" % id), Loc.t("note_%s_body" % id))
 
 func _watcher(d: float, off: float) -> void:
 	var w := Node3D.new()
@@ -459,7 +448,7 @@ func _build_station() -> void:
 	mk.build(self, "Platform", true, 1, {"surface": "gravel"})
 	var house := Props.town_house(77, true)
 	_add_to_world(house, _site(4688.0, 12.5) + Vector3(0, 0.0, 0), Basis.looking_at(Track.fwd(4688.0), Vector3.UP).rotated(Vector3.UP, PI / 2))
-	var sign := Props.sign_post("GREYHAVEN")
+	var sign := Props.sign_post("sign_town")
 	_add_to_world(sign, Track.pos(4672.0, 1.1) + Track.right(4672.0) * 6.6, Basis.looking_at(Track.right(4672.0), Vector3.UP))
 	for i in 7:
 		var ld := d0 + 6.0 + i * 15.0
@@ -617,13 +606,13 @@ func _game_logic(dt: float) -> void:
 		var gap := ob.d - (train.d + Train.FRONT)
 		if gap < 190.0 and not _warned.has(ob.id):
 			_warned[ob.id] = true
-			hud.message("Something lies across the track ahead — brake!", 4.0)
+			hud.message(Loc.t("m_obstacle_ahead"), 4.0)
 			Sfx.play("sting", -14.0)
 	if train.moving and train.fire < 12.0 and train.throttle > 0:
 		_low_fire_t -= dt
 		if _low_fire_t <= 0.0:
 			_low_fire_t = 12.0
-			hud.message("The fire is dying. Shovel more coal." if train.tender_coal > 0 else "The tender is empty. She'll coast to a stop.", 3.0)
+			hud.message(Loc.t("m_fire_dying") if train.tender_coal > 0 else Loc.t("m_tender_empty"), 3.0)
 	# checkpoint when halted before an obstacle
 	if ob and not train.moving and ob.d - train.d < 280.0 and not _stop_saved.has(ob.id):
 		_stop_saved[ob.id] = true
@@ -660,34 +649,34 @@ func _coal_nearby() -> bool:
 
 func _objective() -> String:
 	if not notes_read.has("engine") and not boarded_once:
-		return "Read the note pinned beside the engine's ladder."
+		return Loc.t("obj_note")
 	if not boarded_once:
-		return "Climb the ladder into the engine's cab."
+		return Loc.t("obj_ladder")
 	if not started_once:
 		if not shoveled_once:
-			return "Shovel coal from the tender into the firebox  [E]."
+			return Loc.t("obj_shovel")
 		if train.pressure < 0.25:
-			return "Wait for the steam needle (left gauge) to climb. Another shovelful helps."
+			return Loc.t("obj_wait_steam")
 		if train.brake:
-			return "Release the brake (lever on the left wall)."
-		return "Open the regulator to get moving."
+			return Loc.t("obj_release_brake")
+		return Loc.t("obj_regulator")
 	var ob := next_obstacle()
 	if ob and ob.d - train.d < 280.0 and not train.moving:
 		if not player.has_axe:
-			return "A tree blocks the line. Take the axe from the cab wall."
-		var s := "Clear the fallen tree with the axe  [Left Mouse]."
+			return Loc.t("obj_take_axe")
+		var s := Loc.t("obj_chop")
 		if train.tender_coal < 6:
-			s += "\nCoal is low — search the buildings nearby."
+			s += "\n" + Loc.t("obj_coal_low")
 		return s
 	if not on_train() and train.d > 100.0:
 		if player.carried_coal > 0:
-			return "Carry the coal back and tip it into the tender."
-		return "Get back aboard the train."
+			return Loc.t("obj_carry_coal")
+		return Loc.t("obj_board")
 	if train.d > 4300.0:
-		return "Bring the train into Greyhaven station. Brake at the platform."
+		return Loc.t("obj_station")
 	if train.tender_coal == 0 and train.fire < 20.0:
-		return "Out of coal. Stop near buildings and search for more."
-	return "Follow the line to Greyhaven."
+		return Loc.t("obj_no_coal")
+	return Loc.t("obj_follow")
 
 func _update_audio_state() -> void:
 	if ended:
@@ -728,14 +717,14 @@ func _on_whistle() -> void:
 	creature.scare()
 	if not _whistle_hint:
 		_whistle_hint = true
-		hud.message("The whistle screams through the trees.", 2.5)
+		hud.message(Loc.t("m_whistle"), 2.5)
 
 func _on_impact(speed: float) -> void:
 	player.add_shake(1.0)
 	Sfx.play("crash", -10.0)
 	if on_train() and speed > 4.0:
 		player.take_damage(8.0)
-	hud.message("The engine slams into the fallen tree.", 3.0)
+	hud.message(Loc.t("m_impact"), 3.0)
 
 func _on_crash(_speed: float) -> void:
 	Sfx.play("crash", 2.0)
@@ -743,7 +732,7 @@ func _on_crash(_speed: float) -> void:
 	_defeat("derail")
 
 func _on_obstacle_cleared(id: String) -> void:
-	hud.message("The line is clear. Back to the engine.", 3.5)
+	hud.message(Loc.t("m_line_clear"), 3.5)
 	save_checkpoint()
 
 func on_player_died() -> void:
@@ -751,8 +740,8 @@ func on_player_died() -> void:
 
 func _stats() -> String:
 	var t := int(elapsed)
-	return "distance travelled  %.1f km   ·   time  %d:%02d   ·   coal burned  %d   ·   notes found  %d / %d" % [
-		maxf(0.0, train.d) / 1000.0, t / 60, t % 60, train.coal_burned, notes_read.size(), NOTES.size()]
+	return Loc.t("stats") % [
+		maxf(0.0, train.d) / 1000.0, t / 60, t % 60, train.coal_burned, notes_read.size(), NOTE_IDS.size()]
 
 func _defeat(kind: String) -> void:
 	if ended:
@@ -765,18 +754,18 @@ func _defeat(kind: String) -> void:
 	var sub := ""
 	match kind:
 		"dead":
-			title = "You looked away."
-			sub = "The fog closed in. Somewhere down the line the engine kept hissing for a while, and then it didn't."
+			title = Loc.t("end_dead_title")
+			sub = Loc.t("end_dead_sub")
 			var tw := create_tween()
 			tw.tween_property(player, "cine_rot", Vector3(0.6, 0.0, 1.2), 1.4).set_trans(Tween.TRANS_QUAD)
 			tw.parallel().tween_property(player, "cine_offset", Vector3(0, -1.3, 0), 1.4).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 			Sfx.muffle(true, 400.0)
 		"derail":
-			title = "Derailed."
-			sub = "The engine hit the fallen tree at speed and left the rails. Greyhaven never heard the whistle."
+			title = Loc.t("end_derail_title")
+			sub = Loc.t("end_derail_sub")
 		"stranded":
-			title = "Stranded."
-			sub = "The fire went out and the fog came close. Something between the trees stopped pretending to be a tree."
+			title = Loc.t("end_stranded_title")
+			sub = Loc.t("end_stranded_sub")
 	Sfx.play("sting", -4.0)
 	await get_tree().create_timer(2.2).timeout
 	hud.show_end(kind, title, sub, _stats())
@@ -798,13 +787,13 @@ func _victory() -> void:
 		var tw := create_tween()
 		tw.tween_interval(randf_range(1.0, 3.0))
 		tw.tween_property(tp, "global_position", target, 3.0)
-	hud.show_subtitle("Greyhaven.", 1.5, 3.0, 1.5)
+	hud.show_subtitle(Loc.t("sub_greyhaven"), 1.5, 3.0, 1.5)
 	await get_tree().create_timer(9.0).timeout
-	var sub := "The bell of Greyhaven rang until dawn. You told them about the 7:10, the notes in the trees, and the tall thing that waits for you to blink. They believed you — the trees around Greyhaven had started falling too."
+	var sub := Loc.t("end_win_sub")
 	if notes_read.has("barn"):
-		sub += "\n\nA woman on the platform asked about M. You gave her the letter."
+		sub += "\n\n" + Loc.t("end_win_letter")
 	player.control = false
-	hud.show_end("win", "Survivor", sub, _stats())
+	hud.show_end("win", Loc.t("end_win_title"), sub, _stats())
 
 # ------------------------------------------------------------------ checkpoints
 
@@ -864,7 +853,7 @@ func _begin_from_checkpoint() -> void:
 	hud.fade.color.a = 1.0
 	hud.fade_to(0.0, 1.5)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	hud.message("Back at the controls.", 2.5)
+	hud.message(Loc.t("m_back_controls"), 2.5)
 
 # ------------------------------------------------------------------ intro
 
@@ -881,12 +870,12 @@ func _intro() -> void:
 	Sfx.play("wake_muffled", 0.0)
 	await get_tree().create_timer(1.0).timeout
 	Sfx.play("heartbeat", -4.0)
-	await hud.show_subtitle("cold.", 1.2, 1.6, 1.0).finished
+	await hud.show_subtitle(Loc.t("intro_1"), 1.2, 1.6, 1.0).finished
 	Sfx.play("breath", -4.0)
 	Sfx.play("heartbeat", -6.0)
-	await hud.show_subtitle("the whistle stopped.", 1.2, 1.8, 1.0).finished
+	await hud.show_subtitle(Loc.t("intro_2"), 1.2, 1.8, 1.0).finished
 	Sfx.play("whistle_distant", -8.0)
-	await hud.show_subtitle("where did everyone go?", 1.2, 1.8, 1.2).finished
+	await hud.show_subtitle(Loc.t("intro_3"), 1.2, 1.8, 1.2).finished
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(hud.fade, "color:a", 0.0, 3.5).set_trans(Tween.TRANS_SINE)
 	tw.tween_method(Sfx.set_muffle_cutoff, 280.0, 18000.0, 5.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
@@ -902,4 +891,4 @@ func _intro() -> void:
 	cinematic = false
 	player.control = true
 	save_checkpoint()
-	hud.message("Somewhere on the Ashford line. Greyhaven lies %.1f km ahead." % ((Track.STATION_D - train.d) / 1000.0), 5.0)
+	hud.message(Loc.t("m_start") % ((Track.STATION_D - train.d) / 1000.0), 5.0)

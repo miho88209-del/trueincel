@@ -71,6 +71,9 @@ func _ready() -> void:
 	_build_ui()
 	Settings.changed.connect(_apply_settings)
 	_apply_settings()
+	Loc.changed.connect(func() -> void:
+		for p in papers:
+			_fit(p))
 	Sfx.stop_all_ambience(0.5)
 	Sfx.music("music_menu", 3.0, -3.0)
 	Sfx.ambience("amb_rain", -9.0, 3.0)
@@ -184,14 +187,14 @@ func _build_scene() -> void:
 	pool.position = Vector3(-0.75, 1.15, -0.55)
 	pool.look_at(Vector3(-0.05, 0, 0.05), Vector3.UP)
 	# papers
-	_paper(Vector3(0.0, 0, 0.0), Vector2(0.34, 0.42), 0.04, "play", 150, "play", "the 7:10 to Greyhaven")
-	_paper(Vector3(-0.53, 0, 0.15), Vector2(0.31, 0.23), 0.14, "settings", 88, "settings")
-	_paper(Vector3(-0.17, 0, 0.44), Vector2(0.24, 0.17), -0.06, "exit", 100, "exit")
-	_paper(Vector3(-0.03, 0, -0.39), Vector2(0.52, 0.13), 0.02, "THE LAST WHISTLE", 44, "", "", true)
-	_paper(Vector3(-0.63, 0, -0.17), Vector2(0.2, 0.15), 0.42, "07:10", 72, "")
-	_paper(Vector3(0.5, 0, -0.27), Vector2(0.27, 0.16), -0.3, "don't\nlook away", 58, "")
-	_paper(Vector3(0.56, 0, 0.17), Vector2(0.27, 0.3), 0.09, "the whistle\nkeeps it\nback", 54, "")
-	_paper(Vector3(0.33, 0, 0.46), Vector2(0.22, 0.12), -0.18, "Greyhaven\n4.7 km", 46, "")
+	_paper(Vector3(0.0, 0, 0.0), Vector2(0.34, 0.42), 0.04, "menu_play", 150, "play", "menu_play_sub")
+	_paper(Vector3(-0.53, 0, 0.15), Vector2(0.31, 0.23), 0.14, "menu_settings", 88, "settings")
+	_paper(Vector3(-0.17, 0, 0.44), Vector2(0.24, 0.17), -0.06, "menu_exit", 100, "exit")
+	_paper(Vector3(-0.03, 0, -0.39), Vector2(0.52, 0.13), 0.02, "menu_title", 44, "", "", true)
+	_paper(Vector3(-0.63, 0, -0.17), Vector2(0.2, 0.15), 0.42, "menu_note_time", 72, "")
+	_paper(Vector3(0.5, 0, -0.27), Vector2(0.27, 0.16), -0.3, "menu_note_look", 58, "")
+	_paper(Vector3(0.56, 0, 0.17), Vector2(0.27, 0.3), 0.09, "menu_note_whistle", 54, "")
+	_paper(Vector3(0.33, 0, 0.46), Vector2(0.22, 0.12), -0.18, "menu_note_dist", 46, "")
 	# mug with steam, pencil
 	var mug := MK.new()
 	mug.cyl("metal", Transform3D(Basis(), Vector3(0.86, 0, -0.08)), 0.06, 0.065, 0.13, 14, Color(0.5, 0.5, 0.5))
@@ -221,14 +224,16 @@ func _paper(pos: Vector3, size: Vector2, yaw: float, text: String, font_size: in
 	mi.material_override = m
 	node.add_child(mi)
 	var col := Color(0.16, 0.15, 0.15) if action != "" else Color(0.3, 0.29, 0.28)
-	var l := Props.label(text, font_size, col, not typed, 0.0012)
+	var l := Props.label(Loc.t(text), font_size, col, not typed, 0.0012)
+	Loc.bind(l, text)
 	l.rotation.x = -PI / 2
 	l.position = Vector3(0, 0.009, -0.03 if sub != "" else 0.0)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	node.add_child(l)
 	if sub != "":
-		var s := Props.label(sub, 30, Color(0.35, 0.33, 0.31), true, 0.0012)
+		var s := Props.label(Loc.t(sub), 30, Color(0.35, 0.33, 0.31), true, 0.0012)
+		Loc.bind(s, sub)
 		s.rotation.x = -PI / 2
 		s.position = Vector3(0, 0.009, 0.11)
 		node.add_child(s)
@@ -241,7 +246,15 @@ func _paper(pos: Vector3, size: Vector2, yaw: float, text: String, font_size: in
 		body.add_child(cs)
 		body.set_meta("paper", papers.size())
 		node.add_child(body)
-	papers.append({"node": node, "label": l, "action": action, "base": node.position, "mat": m, "yaw": yaw, "col": col})
+	papers.append({"node": node, "label": l, "action": action, "base": node.position, "mat": m, "yaw": yaw, "col": col, "fs": font_size, "w": size.x})
+	_fit(papers[-1])
+
+## Shrinks a note's text so longer translations stay on the paper.
+func _fit(p: Dictionary) -> void:
+	var l: Label3D = p["label"]
+	var px: Vector2 = l.font.get_multiline_string_size(l.text, HORIZONTAL_ALIGNMENT_CENTER, -1, p["fs"])
+	var max_px: float = p["w"] * 0.86 / l.pixel_size
+	l.font_size = int(p["fs"] * minf(1.0, max_px / maxf(px.x, 1.0)))
 
 func _steam(pos: Vector3) -> void:
 	var p := GPUParticles3D.new()
@@ -332,7 +345,7 @@ func _build_ui() -> void:
 	ls.font_size = 20
 	ls.font_color = Color(0.55, 0.53, 0.5, 0.6)
 	hint.label_settings = ls
-	hint.text = "click a note"
+	Loc.bind(hint, "menu_hint")
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	hint.offset_left = -300; hint.offset_top = -60; hint.offset_right = -40; hint.offset_bottom = -30
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
