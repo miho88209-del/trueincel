@@ -1,12 +1,14 @@
 # The Last Can of Beans
 
-A funny Western survival game for the browser. You're a broke cowboy riding out one stormy night in Coffin Rock Canyon with a judgmental horse named Biscuit, a tin cup, and one dented can of beans. Gather firewood at sundown, decide whether to risk a run to the abandoned wagon as the storm rolls in, then keep the fire, your warmth, and your belly alive until sunrise.
+A funny 3D Western survival game for the browser. You're a broke cowboy riding out one stormy night in Coffin Rock Canyon with a judgmental horse named Biscuit, a tin cup, and one dented can of beans. Gather firewood at sundown, scavenge the abandoned wagon, cook dinner, find shelter when the storm rolls in, and keep the fire, and yourself, alive until sunrise.
 
-A run lasts about **9 minutes** (7:00 PM → 6:00 AM). Everything is plain HTML, CSS, and JavaScript. All art is drawn in code on a canvas and all sound is synthesized with WebAudio, so there are no downloads, build steps, or dependencies beyond Python 3.
+A night lasts about **9 minutes** (7:00 PM → 6:00 AM). It runs in **English, Français, and Русский**.
+
+The game is plain HTML/CSS/JavaScript with [Three.js](https://threejs.org) r187 included locally in `vendor/`. All models, terrain, and textures are generated in code, and all sound is synthesized with WebAudio. There is nothing to install or build, and it needs no internet connection.
 
 ## Launch (Linux)
 
-From this folder, run:
+You need Python 3 (preinstalled on almost every Linux distribution). From this folder, run:
 
 ```bash
 python3 -m http.server 8000
@@ -18,51 +20,74 @@ Or use the included script, which does the same thing:
 ./start.sh
 ```
 
-Then open **http://localhost:8000/** in Chrome or Firefox. Click the page or press **Enter** to start. If port 8000 is taken, use another one (e.g. `python3 -m http.server 8080`, or `PORT=8080 ./start.sh`) and open that port. If your system's `localhost` misbehaves, `http://127.0.0.1:8000/` is the same game.
+Then open **http://localhost:8000/** in an up-to-date Chrome/Chromium or Firefox. Click **Ride**, or press **Enter**.
 
-Stop the server with **Ctrl+C**.
+- If port 8000 is taken, use another one: `python3 -m http.server 8080` (or `PORT=8080 ./start.sh`), then open `http://localhost:8080/`.
+- If `localhost` doesn't resolve on your system, use `http://127.0.0.1:8000/`.
+- Opening `index.html` directly as a file will **not** work, because browsers block ES modules from `file://`. Use the server.
+- Stop the server with **Ctrl+C**.
 
 ## Controls
 
-| Key | Action |
+| Input | Action |
 | --- | --- |
-| **A / D** or **← / →** | Walk |
+| **W A S D** | Walk (relative to the camera) |
+| **Mouse** | Look around (click the game to capture the mouse; or drag with the button held) |
+| **Mouse wheel** | Camera distance |
 | **Shift** (hold) | Hurry (burns food faster) |
-| **E** | Use: gather wood, feed fire, strike a match, search wagon, pet Biscuit, pick things up |
-| **B** | Put your beans on the fire to heat |
-| **F** | Eat (the beans on the fire, or food from your pack) |
-| **C** | Throw your tin cup (raccoons love shiny things) |
-| **S** or **↓** (hold) | Crouch: hold your hat in a gust, shield a match from the rain |
-| **P** / **Esc** | Pause |
+| **E** | Interact: gather wood, feed the fire, strike a match, search the wagon, rig the canvas, pet Biscuit, pick things up |
+| **F** | Cook / eat: put the beans on the fire, eat them, or eat food from your pack |
+| **Q** | Throw your tin cup where the camera is looking |
+| **C** (hold) | Crouch: hold your hat in a gust, shield a match from the rain |
+| **Esc** / **P** | Pause menu (language, mouse sensitivity, invert Y, volume, restart) |
 | **M** | Mute |
-| **R** | Restart instantly (also Enter on the end screen) |
+| **Enter** / **R** | Ride again from the end screen (R also restarts from the pause menu) |
+| **← / →** | Turn the camera without a mouse |
 
-On-screen prompts show what each key does wherever you're standing, and tips appear as you play.
+When you can interact with something, a key prompt appears at the bottom of the screen. On-screen markers point to camp, the wagon, the rock overhang, and anything the wind or a raccoon ran off with.
+
+## Language
+
+Pick **English / Français / Русский** on the title screen or in the pause menu (Esc). The change applies immediately, including menus, the HUD, prompts, tutorial tips, jokes, and the end screens. Your choice is remembered in the browser (`localStorage`). The first launch is in English.
 
 ## How to survive
 
-- **Warmth** drops away from the fire, faster at night, in rain, without your hat, or on an empty belly. If it hits zero, you freeze, and the run is over.
-- **Fire** burns down steadily, faster in the storm. Feed it logs (E). If it goes out, you need a match *and* fuel. In the rain, an uncrouched match may fizzle.
-- **Belly** empties over the night. Hot beans are the best meal in the territory. Cold beans, prickly pears, and mystery jerky also count.
-- **Sundown is the safe time to gather.** The near side of the canyon doesn't have enough wood for the whole night.
-- The **abandoned wagon** (far east, past the dry wash) has supplies and boards to burn. After the storm starts, the **wash flash-floods**. Heed the rumble, or get swept back with soaked clothes and no firewood.
+- **Warmth.** Falls away from the fire, faster at night, in the storm, when you're wet, hatless, or starving. At zero you freeze and the run ends.
+- **Dryness.** Rain soaks you unless you're sheltered. Wading the dry wash during the storm soaks you fast. Wet clothes make the cold bite much harder. You dry off by the fire.
+- **Fire.** Burns down steadily, faster in the rain. Dry wood burns well. Wood gathered in the rain is wet: it burns weak and smoky. In the rain, a match struck without crouching may fizzle.
+- **Belly.** Empties over the night. Hot beans are the best meal in the territory. Peaches and prickly pears help too.
 
-## Things that can go sideways (on purpose)
+### The canyon
 
-- Heating your beans makes them smell. A **raccoon** shows up (watch the rustling sage and glowing eyes). Shoo it by walking at it, or **throw your tin cup** to distract it. If it grabs the can, chase it down.
-- Wander more than a stone's throw from the fire while the beans cook and **Biscuit** will get ideas. If he eats your beans, he gets gassy, and his toots fan the flames (and scare raccoons).
-- Eat the beans yourself and you get gassy too. Toot near the fire and you lose your eyebrows. Toot near the raccoon and it runs.
-- **Wind gusts** blow your hat off unless you crouch. No hat means a colder night until you chase it down. Tumbleweeds roll by on the wind and make decent kindling.
-- Desperate? You can burn Mabel's love letters.
+- **Camp** sits at the south end, with your fire, bedroll, and Biscuit at the hitching post.
+- **Coffin Rock** is the big mesa in the middle. A **slot canyon (the dry wash)** cuts straight through it. That's the shortcut north, but once the storm starts it fills with water and can **flash-flood**. Listen for the rumble.
+- The **east trail** goes around the mesa past dead trees and cactus. It's longer, but stays out of the wash.
+- The **rock overhang** on the west wall is the only dry place in the storm, and its woodpile stays dry.
+- The **abandoned wagon** at the north end has matches, a can of peaches, a blanket, boards to burn, and its **canvas**, which you can rig over your fire to keep it, and you, dry.
+
+### Things that go sideways (on purpose)
+
+- Heating your beans makes them smell. A **raccoon** shows up: watch for the rustling sagebrush. Walk at it to shoo it, or **throw your tin cup [Q]** to distract it. If it grabs the can, run it down.
+- Wander off while the beans cook and **Biscuit** will get ideas. If he eats your beans, he gets gassy, and his toots fan the fire (and scare raccoons).
+- Eat the beans yourself and *you* get gassy. Toot by the fire and you lose your eyebrows.
+- **Wind gusts** steal your hat unless you crouch. No hat means a colder night until you chase it down.
+- Desperate? Burn Mabel's love letters.
+
+## Performance
+
+The game targets any machine with working WebGL. If the first seconds of play run slowly, it automatically switches off the expensive shadows and lowers the resolution. To force the light mode from the start, open **http://localhost:8000/?quality=low**.
 
 ## Files
 
 ```
-index.html     page + title/end screens
-style.css      UI styling
-js/audio.js    procedural sound (wind, rain, fire, thunder, guitar, toots)
-js/game.js     game logic and canvas rendering
-start.sh       convenience launcher (python3 -m http.server)
+index.html        page, HUD, title / pause / end screens
+style.css         UI styling
+js/main.js        3D world, characters, game systems, camera, HUD
+js/audio.js       procedural sound (wind, rain, fire, thunder, guitar, toots)
+js/i18n.js        language runtime (stores your choice in localStorage)
+js/lang/*.js      English, French, Russian strings
+vendor/           Three.js r187 (MIT, see vendor/THREE_LICENSE)
+start.sh          convenience launcher (python3 -m http.server)
 ```
 
 Testing hook: append `?speed=10` to the URL to run the night faster.

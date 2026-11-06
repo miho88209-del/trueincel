@@ -1281,7 +1281,7 @@ function frame(now) {
 }
 
 // test hook for automated checks (harmless in normal play)
-window.__beans = { get G() { return G; }, get mode() { return mode; }, start: startGame, cam, keys, actions: () => getActions().map(a => ({ key: a.key, k: a.m.k, ok: !!a.fn, d: a.d })), act: k => { const a = getActions().filter(x => x.key === k && x.fn).sort((x, y) => x.d - y.d)[0]; if (a) { a.fn(); return a.m.k; } return null; }, setLang: l => I18N.set(l), terrainInfo, CAMP, WAGON, OVERHANG, washX };
+window.__beans = { sources: () => woodSources.filter(w => w.n > 0).map(w => ({ x: w.x, z: w.z, kind: w.kind })).concat(wagon.searched && wagon.boards > 0 ? [{ x: WAGON.x - 2.5, z: WAGON.z + 1.5, kind: 'dry' }] : []), get G() { return G; }, get mode() { return mode; }, start: startGame, cam, keys, actions: () => getActions().map(a => ({ key: a.key, k: a.m.k, ok: !!a.fn, d: a.d })), act: k => { const a = getActions().filter(x => x.key === k && x.fn).sort((x, y) => x.d - y.d)[0]; if (a) { a.fn(); return a.m.k; } return null; }, setLang: l => I18N.set(l), terrainInfo, CAMP, WAGON, OVERHANG, washX };
 
 newGame(); G.toasts = [];
 mode = 'title'; $('loading').classList.add('hidden');
