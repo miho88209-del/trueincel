@@ -2,7 +2,8 @@
 """Builds the small Chinese fallback fonts from the characters used in i18n/zh.json.
 
 Run after editing translations:  python3 tools/subset_fonts.py
-Downloads the full source fonts (OFL, Google Fonts) into tools/.font_cache on first use.
+Uses the full source fonts in tools/font_sources (shipped in the source ZIP; downloaded
+from Google Fonts, OFL, if missing).
 Also copies PT Mono (Cyrillic typewriter fallback). Needs: pip install fonttools
 """
 import json, os, pathlib, urllib.request
@@ -11,7 +12,7 @@ from fontTools.ttLib import TTFont
 from fontTools.varLib import instancer
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-CACHE = ROOT / "tools" / ".font_cache"
+CACHE = ROOT / "tools" / "font_sources"
 BASE = "https://github.com/google/fonts/raw/main/ofl/"
 SOURCES = {
     "MaShanZheng-Regular.ttf": "mashanzheng/MaShanZheng-Regular.ttf",
