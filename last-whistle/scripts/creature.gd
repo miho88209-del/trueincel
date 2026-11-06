@@ -141,7 +141,7 @@ func tick(dt: float, exposed: bool, darkness: float) -> void:
 			_stalk_announced = true
 			Sfx.duck_ambience(-28.0, 0.8)
 			get_tree().create_timer(6.0).timeout.connect(func() -> void: Sfx.duck_ambience(0.0, 3.0))
-			world.hud.message("The woods have gone quiet.", 3.0)
+			world.hud.message(Loc.t("m_quiet"), 3.0)
 		if not visible or not observed:
 			_spawn(p, 20.0, 26.0, true)
 	match state:
@@ -216,7 +216,7 @@ func _stalk(dt: float, p: Player, darkness: float) -> void:
 
 func _strike(p: Player) -> void:
 	p.take_damage(34.0)
-	world.hud.message("Don't look away.", 3.0)
+	world.hud.message(Loc.t("m_dont_look"), 3.0)
 	_vanish(true)
 	cooldown = 16.0
 	exposure = 12.0
