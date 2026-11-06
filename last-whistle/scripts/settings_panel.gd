@@ -125,6 +125,7 @@ func _ready() -> void:
 	theme = paper_theme()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Settings.changed.connect(_refresh)
+	Loc.changed.connect(_rebuild, CONNECT_DEFERRED)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.45)
@@ -142,7 +143,7 @@ func _ready() -> void:
 	v.add_theme_constant_override("separation", 6)
 	panel.add_child(v)
 	var title := Label.new()
-	title.text = "settings"
+	Loc.bind(title, "set_title")
 	title.add_theme_font_size_override("font_size", 64)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)
@@ -160,14 +161,14 @@ func _ready() -> void:
 	bottom.add_theme_constant_override("separation", 60)
 	v.add_child(bottom)
 	var reset := Button.new()
-	reset.text = "reset to defaults"
+	Loc.bind(reset, "set_reset")
 	reset.pressed.connect(func() -> void:
 		Sfx.play("ui_click", -4.0)
 		Settings.reset_defaults()
 		_refresh())
 	bottom.add_child(reset)
 	var back := Button.new()
-	back.text = "back"
+	Loc.bind(back, "set_back")
 	back.add_theme_font_size_override("font_size", 44)
 	back.pressed.connect(close)
 	bottom.add_child(back)
@@ -185,7 +186,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _section(text: String) -> void:
 	var l := Label.new()
-	l.text = text
+	l.text = Loc.t(text)
 	l.add_theme_font_size_override("font_size", 42)
 	l.add_theme_color_override("font_color", Color(0.45, 0.12, 0.08))
 	_rows.add_child(l)
@@ -194,7 +195,7 @@ func _row(text: String, w: Control) -> void:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 20)
 	var l := Label.new()
-	l.text = text
+	l.text = Loc.t(text)
 	l.custom_minimum_size = Vector2(380, 0)
 	h.add_child(l)
 	w.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -256,35 +257,55 @@ func _fmt(key: String, x: float) -> String:
 		return "%d°" % roundi(x)
 	return "%.2f" % x
 
+func _names(prefix: String, items: Array) -> Array:
+	var out := []
+	for it in items:
+		out.append(Loc.t(prefix + it) if Loc.has(prefix + it) else it)
+	return out
+
+func _rebuild() -> void:
+	for c in _rows.get_children():
+		_rows.remove_child(c)
+		c.queue_free()
+	_widgets.clear()
+	_build()
+
 func _build() -> void:
-	_section("graphics")
-	_option("quality", "quality preset", Settings.QUALITY_NAMES.slice(0, 4),
+	_section("sec_language")
+	var langs := []
+	for l in Loc.LANGS:
+		langs.append(Loc.NAMES[l])
+	_option("language", "opt_language", langs,
+		func(i: int): return Loc.LANGS[i],
+		func(val) -> int: return Loc.LANGS.find(val))
+	_section("sec_graphics")
+	_option("quality", "opt_quality", _names("q_", Settings.QUALITY_NAMES.slice(0, 4)),
 		func(i: int): return Settings.QUALITY_NAMES[i],
 		func(val) -> int: return Settings.QUALITY_NAMES.find(val))
-	_option("shadows", "shadows", Settings.SHADOW_NAMES)
-	_check("post_fx", "post-processing (bloom, grading)")
-	_check("ssao", "ambient occlusion")
-	_check("volumetric", "volumetric fog & light")
-	_option("aa", "anti-aliasing", Settings.AA_NAMES)
-	_option("view", "view distance", Settings.VIEW_NAMES)
-	_slider("grass", "grass density", 0.0, 1.0, 0.05)
-	_slider("render_scale", "render scale", 0.5, 1.0, 0.05)
-	_section("display")
-	_option("window_mode", "display mode", Settings.MODE_NAMES)
+	_option("shadows", "opt_shadows", _names("sh_", Settings.SHADOW_NAMES))
+	_check("post_fx", "opt_postfx")
+	_check("ssao", "opt_ssao")
+	_check("volumetric", "opt_volumetric")
+	_option("aa", "opt_aa", _names("aa_", Settings.AA_NAMES))
+	_option("view", "opt_view", _names("view_", Settings.VIEW_NAMES))
+	_slider("grass", "opt_grass", 0.0, 1.0, 0.05)
+	_slider("render_scale", "opt_render_scale", 0.5, 1.0, 0.05)
+	_section("sec_display")
+	_option("window_mode", "opt_window_mode", _names("mode_", Settings.MODE_NAMES))
 	var res := []
 	for r in Settings.RESOLUTIONS:
 		res.append("%d × %d" % [r.x, r.y])
-	_option("resolution", "window resolution", res)
-	_check("vsync", "vertical sync")
-	_section("audio")
-	_slider("master", "master volume", 0.0, 1.0, 0.05)
-	_slider("music", "music", 0.0, 1.0, 0.05)
-	_slider("sfx", "effects", 0.0, 1.0, 0.05)
-	_slider("ambience", "ambience", 0.0, 1.0, 0.05)
-	_section("controls")
-	_slider("sensitivity", "mouse sensitivity", 0.05, 0.6, 0.01)
-	_slider("fov", "field of view", 60.0, 100.0, 1.0)
-	_check("invert_y", "invert mouse Y")
+	_option("resolution", "opt_resolution", res)
+	_check("vsync", "opt_vsync")
+	_section("sec_audio")
+	_slider("master", "opt_master", 0.0, 1.0, 0.05)
+	_slider("music", "opt_music", 0.0, 1.0, 0.05)
+	_slider("sfx", "opt_sfx", 0.0, 1.0, 0.05)
+	_slider("ambience", "opt_ambience", 0.0, 1.0, 0.05)
+	_section("sec_controls")
+	_slider("sensitivity", "opt_sensitivity", 0.05, 0.6, 0.01)
+	_slider("fov", "opt_fov", 60.0, 100.0, 1.0)
+	_check("invert_y", "opt_invert_y")
 	_refresh()
 
 func _refresh() -> void:
@@ -295,7 +316,7 @@ func _refresh() -> void:
 		if w[0] is OptionButton:
 			var idx: int = w[1].call(val) if w.size() > 1 and w[1] is Callable and (w[1] as Callable).is_valid() else int(val)
 			if key == "quality" and idx < 0:
-				(w[0] as OptionButton).text = "custom"
+				(w[0] as OptionButton).text = Loc.t("q_Custom")
 				(w[0] as OptionButton).selected = -1
 			else:
 				(w[0] as OptionButton).selected = idx

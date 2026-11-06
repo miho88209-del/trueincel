@@ -65,6 +65,21 @@ func pshot(name: String) -> void:
 	_fast()
 
 func run_menu(m) -> void:
+	if Game.autotest_args.get("mode", "") == "lang":
+		_fast()
+		for l in Loc.LANGS:
+			Settings.set_val("language", l)
+			await wait(1.5)
+			await shot("lang_%s_1_menu" % l)
+			m.activate("settings")
+			await wait(1.5)
+			await shot("lang_%s_2_settings" % l)
+			for c in m.layer.get_children():
+				if c is SettingsPanel:
+					c.close()
+			await wait(0.3)
+		Game.start_new()
+		return
 	if Game.autotest_args.get("mode", "") == "menushot":
 		await wait(4.0)
 		await shot("menu_only")
@@ -99,6 +114,16 @@ func run_menu(m) -> void:
 	check("settings persisted to disk", cfg.load(Settings.PATH) == OK and cfg.get_value("settings", "quality") == "Low" and is_equal_approx(cfg.get_value("settings", "music"), 0.35))
 	await wait(0.5)
 	await shot("04_menu_low_quality")
+	Settings.set_val("language", "ru")
+	await wait(0.5)
+	var lbl: Label3D = m.papers[0]["label"]
+	check("language switch relabels the menu", Loc.lang == "ru" and lbl.text == Loc.t("menu_play") and lbl.text != "play", lbl.text)
+	Settings.save_settings()
+	var cfg2 := ConfigFile.new()
+	check("language persisted to disk", cfg2.load(Settings.PATH) == OK and cfg2.get_value("settings", "language") == "ru")
+	Settings.set_val("language", "en")
+	await wait(0.3)
+	check("switching back to English", lbl.text == "play", lbl.text)
 	Settings.set_val("quality", "High")
 	Settings.set_val("music", 0.7)
 	if panel:
@@ -119,6 +144,9 @@ func run(world) -> void:
 		return
 	if Game.autotest_args.get("mode", "") == "tour":
 		await _run_tour()
+		return
+	if Game.autotest_args.get("mode", "") == "lang":
+		await _run_lang()
 		return
 	Engine.time_scale = 1.0
 	say("fps %d" % Engine.get_frames_per_second())
@@ -404,4 +432,31 @@ func _run_tour() -> void:
 	await _goto(4690.0, Track.side(4640.0, 6.0, 1.15), Track.side(4700.0, 3.0, 2.0), 0.85, "t8_greyhaven_night")
 	await _goto(4600.0, Track.pos(4420.0, 3.0), Track.pos(4700.0, 4.0), 0.85, "t9_town_lights_far")
 	await _goto(2000.0, Track.side(2030.0, -8.0, 0.2), Track.pos(2000.0, 2.0) + Track.fwd(2000.0) * -10.0, 0.88, "t10_carriage_night")
+	finish()
+
+# ------------------------------------------------------------------ language screenshots
+
+func _run_lang() -> void:
+	var p: Player = w.player
+	w.cinematic = false
+	w.hud.fade.color.a = 0.0
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	for l in Loc.LANGS:
+		Settings.set_val("language", l)
+		await wait(0.5)
+		w.hud.message(Loc.t("m_start") % 4.7, 30.0)
+		await wait(2.0)
+		await shot("lang_%s_3_hud" % l)
+		w.read_note("engine")
+		await wait(0.8)
+		await shot("lang_%s_4_note" % l)
+		w.hud.close_note()
+		w.hud.toggle_pause()
+		await wait(0.8)
+		await shot("lang_%s_5_pause" % l)
+		w.hud.toggle_pause()
+	w.hud.show_end("win", Loc.t("end_win_title"), Loc.t("end_win_sub") + "\n\n" + Loc.t("end_win_letter"), w._stats())
+	await wait(2.5)
+	await shot("lang_zh_6_victory")
+	Settings.set_val("language", "en")
 	finish()

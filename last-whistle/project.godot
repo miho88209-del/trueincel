@@ -15,6 +15,7 @@ boot_splash/show_image=false
 [autoload]
 
 Settings="*res://scripts/settings.gd"
+Loc="*res://scripts/loc.gd"
 Sfx="*res://scripts/audio.gd"
 Game="*res://scripts/game.gd"
 

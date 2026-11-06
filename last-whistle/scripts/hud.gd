@@ -178,7 +178,7 @@ func _build_note() -> void:
 	note_body.custom_minimum_size = Vector2(720, 560)
 	v.add_child(note_body)
 	var hint := Label.new()
-	hint.text = "[E] or [Esc] to put it down"
+	Loc.bind(hint, "note_hint")
 	hint.add_theme_font_override("font", Props.font_type)
 	hint.add_theme_font_size_override("font_size", 22)
 	hint.add_theme_color_override("font_color", Color(0.35, 0.33, 0.3))
@@ -205,13 +205,13 @@ func _build_pause() -> void:
 	v.add_theme_constant_override("separation", 14)
 	p.add_child(v)
 	var t := Label.new()
-	t.text = "paused"
+	Loc.bind(t, "pause_title")
 	t.add_theme_font_size_override("font_size", 60)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	for item in [["resume", toggle_pause], ["settings", open_settings], ["retry from last stop", func() -> void: Game.retry()], ["main menu", func() -> void: Game.goto_menu()], ["exit game", func() -> void: Game.quit()]]:
+	for item in [["pause_resume", toggle_pause], ["pause_settings", open_settings], ["pause_retry", func() -> void: Game.retry()], ["pause_menu", func() -> void: Game.goto_menu()], ["pause_exit", func() -> void: Game.quit()]]:
 		var b := Button.new()
-		b.text = item[0]
+		Loc.bind(b, item[0])
 		b.add_theme_font_size_override("font_size", 42)
 		b.pressed.connect(func() -> void:
 			Sfx.play("ui_click", -4.0)
@@ -298,12 +298,12 @@ func show_subtitle(text: String, t_in := 1.2, hold := 2.5, t_out := 1.2) -> Twee
 
 func update_status(s: Dictionary) -> void:
 	var lines := []
-	lines.append("GREYHAVEN  %.1f km" % s["dist_km"])
+	lines.append(Loc.t("status_dist") % s["dist_km"])
 	if s["show_train"]:
-		lines.append("%d km/h   ·   regulator %d/4%s" % [s["kmh"], s["notch"], "   ·   BRAKE" if s["brake"] else ""])
-		lines.append("coal in tender  %d" % s["coal"])
+		lines.append(Loc.t("status_speed") % [s["kmh"], s["notch"]] + (Loc.t("status_brake") if s["brake"] else ""))
+		lines.append(Loc.t("status_coal") % s["coal"])
 	if s["carried"] > 0:
-		lines.append("carrying coal  %d" % s["carried"])
+		lines.append(Loc.t("status_carry") % s["carried"])
 	status.text = "\n".join(lines)
 	fire_bar.visible = s["show_train"]
 	fire_bar.value = s["fire"]
@@ -363,14 +363,14 @@ func show_end(kind: String, title: String, sub: String, stats: String) -> void:
 	v.add_child(h)
 	var buttons := []
 	if kind != "win":
-		buttons.append(["retry from last stop", func() -> void: Game.retry()])
-	buttons.append(["restart journey", func() -> void: Game.start_new()])
-	buttons.append(["main menu", func() -> void: Game.goto_menu()])
+		buttons.append(["pause_retry", func() -> void: Game.retry()])
+	buttons.append(["end_restart", func() -> void: Game.start_new()])
+	buttons.append(["pause_menu", func() -> void: Game.goto_menu()])
 	if kind == "win":
-		buttons.append(["exit game", func() -> void: Game.quit()])
+		buttons.append(["pause_exit", func() -> void: Game.quit()])
 	for item in buttons:
 		var b := Button.new()
-		b.text = item[0]
+		Loc.bind(b, item[0])
 		b.add_theme_font_size_override("font_size", 42)
 		b.add_theme_color_override("font_color", PALE)
 		b.add_theme_color_override("font_hover_color", Color(1.0, 0.7, 0.4))
