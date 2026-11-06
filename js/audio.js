@@ -109,6 +109,11 @@ const Sound = (() => {
     toot(low = false) {
       tone({ type: 'sawtooth', f0: low ? 70 : 110, f1: low ? 55 : 80, dur: low ? 0.9 : 0.6, vol: 0.25, vib: low ? 18 : 25, vibRate: low ? 13 : 18, lp: 500 });
     },
+    howl() {
+      tone({ type: 'sine', f0: 420, f1: 880, dur: 1.2, vol: 0.05, attack: 0.4, vib: 12, vibRate: 6, lp: 2000 });
+      tone({ type: 'sine', f0: 880, f1: 600, dur: 1.8, vol: 0.05, attack: 0.1, delay: 1.1, vib: 15, vibRate: 6, lp: 2000 });
+      tone({ type: 'sine', f0: 500, f1: 780, dur: 1.4, vol: 0.03, attack: 0.5, delay: 0.7, vib: 10, vibRate: 7, lp: 2000 });
+    },
     hat() { noise({ dur: 0.5, freq: 900, q: 1, vol: 0.2, attack: 0.03 }); },
     pluck(f, vol = 0.12) {
       if (!ok()) return;

@@ -271,7 +271,7 @@ function update(dt) {
   // environment
   G.storm = smooth(115, 200, t) * (1 - smooth(470, 525, t));
   G.night = smooth(70, 230, t) * (1 - smooth(485, 540, t));
-  G.dark = 0.08 + 0.8 * G.night;
+  G.dark = 0.08 + 0.74 * G.night;
   G.wind = 0.2 + G.storm * 0.9 + G.gust * 1.6 + Math.sin(t * 0.7) * 0.15 * (0.4 + G.storm);
   G.flash = Math.max(0, G.flash - dt * 3.2);
   G.gust = Math.max(0, G.gust - dt * 0.6);
@@ -283,6 +283,7 @@ function update(dt) {
   if (t > 110 && beat('storm')) { toast('Thunderheads over the west rim. Storm\'s comin\'. Gather what you can.', '#ffb070', 6); later(1, () => Sound.thunder(0.35)); }
   if (t > 175 && beat('rain')) toast('First drops. Head back to camp, or risk one more run to that wagon?', '#ffb070', 7);
   if (t > 235 && beat('dark')) toast('Full dark. Keep that fire alive till sunrise.', '#ffd9a0', 6);
+  if ((t > 40 && beat('howl1')) || (t > 492 && beat('howl2'))) Sound.howl();
   if (t > 470 && beat('dawn')) toast('The storm\'s breakin\'. Is that... the sun? Hang on, cowboy!', '#ffd890', 6);
 
   // player
@@ -1078,9 +1079,9 @@ function drawLighting() {
   lctx.fillStyle = g; lctx.fillRect(fx - R, fy - R, R * 2, R * 2);
   // faint personal visibility so you can always see yourself
   const px = sx(G.p.x), py = BASE_Y - 30;
-  const g2 = lctx.createRadialGradient(px, py, 5, px, py, 90);
-  g2.addColorStop(0, 'rgba(0,0,0,0.45)'); g2.addColorStop(1, 'rgba(0,0,0,0)');
-  lctx.fillStyle = g2; lctx.fillRect(px - 90, py - 90, 180, 180);
+  const g2 = lctx.createRadialGradient(px, py, 5, px, py, 150);
+  g2.addColorStop(0, 'rgba(0,0,0,0.55)'); g2.addColorStop(1, 'rgba(0,0,0,0)');
+  lctx.fillStyle = g2; lctx.fillRect(px - 150, py - 150, 300, 300);
   ctx.drawImage(lightC, 0, 0);
   // warm additive glow
   if (f.lit || f.ember > 0.05) {
