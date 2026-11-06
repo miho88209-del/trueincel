@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Last Can of Beans</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+
+  <div id="title" class="overlay">
+    <div class="card">
+      <div class="eyebrow">Coffin Rock Canyon &middot; One Stormy Night</div>
+      <h1>The Last Can<br>of Beans</h1>
+      <p class="tag">You're broke. Your horse is judgmental. Dinner is one dented can.<br>Survive till sunrise.</p>
+      <button id="startBtn">Press Enter to Ride</button>
+      <div class="controls">
+        <span><b>A/D</b> or <b>&larr;/&rarr;</b> walk</span>
+        <span><b>Shift</b> hurry</span>
+        <span><b>E</b> use / gather / feed fire</span>
+        <span><b>B</b> heat beans</span>
+        <span><b>F</b> eat</span>
+        <span><b>C</b> throw tin cup</span>
+        <span><b>S</b> / <b>&darr;</b> crouch</span>
+        <span><b>P</b> pause &middot; <b>M</b> mute &middot; <b>R</b> restart</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="end" class="overlay hidden">
+    <div class="card">
+      <div class="eyebrow" id="endEyebrow"></div>
+      <h1 id="endTitle"></h1>
+      <p class="tag" id="endText"></p>
+      <ul id="endStats"></ul>
+      <button id="againBtn">Press Enter or R to Ride Again</button>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="card small"><h2>Paused</h2><p class="tag">Press P or Esc to keep surviving.</p></div>
+  </div>
+</div>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

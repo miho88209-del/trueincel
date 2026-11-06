@@ -1,0 +1,40 @@
+html, body {
+  margin: 0; height: 100%; background: #07060b; overflow: hidden;
+  font-family: Georgia, "Times New Roman", serif; color: #f3e2c2;
+}
+#wrap { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+canvas#game {
+  display: block; background: #000;
+  width: min(100vw, calc(100vh * 16 / 9)); height: min(100vh, calc(100vw * 9 / 16));
+  image-rendering: auto;
+}
+.overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(20,8,4,0.25) 0%, rgba(8,4,10,0.75) 100%);
+  transition: opacity .4s;
+}
+.overlay.hidden { opacity: 0; pointer-events: none; }
+.card {
+  text-align: center; max-width: 760px; padding: 28px 40px 30px;
+  background: linear-gradient(180deg, rgba(48,24,14,0.86), rgba(24,12,10,0.9));
+  border: 2px solid #b8873f; border-radius: 6px;
+  box-shadow: 0 0 0 6px rgba(30,14,8,0.6), 0 20px 60px rgba(0,0,0,0.6);
+}
+.card.small { padding: 18px 40px; }
+.eyebrow { letter-spacing: .35em; text-transform: uppercase; font-size: 13px; color: #e0a85a; }
+h1 {
+  margin: 10px 0 8px; font-size: 64px; line-height: .95; letter-spacing: .04em; text-transform: uppercase;
+  color: #ffd9a0; text-shadow: 0 3px 0 #7a2e16, 0 6px 18px rgba(255,120,40,.45);
+}
+h2 { margin: 0 0 6px; text-transform: uppercase; letter-spacing: .2em; color: #ffd9a0; }
+.tag { font-style: italic; color: #f0d6b0; font-size: 18px; line-height: 1.4; }
+button {
+  margin: 14px 0 6px; font: inherit; font-size: 20px; letter-spacing: .12em; text-transform: uppercase;
+  color: #2a140a; background: linear-gradient(#ffd27a, #e0902e); border: 2px solid #5a2a10;
+  padding: 10px 26px; border-radius: 4px; cursor: pointer; box-shadow: 0 4px 0 #5a2a10;
+}
+button:hover { filter: brightness(1.1); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; margin-top: 14px; font-size: 14px; color: #e9cfa5; }
+.controls b { color: #ffd27a; font-family: monospace; font-size: 14px; }
+#endStats { list-style: none; padding: 0; margin: 10px 0; font-size: 16px; line-height: 1.6; color: #f3e2c2; }
+#endStats li b { color: #ffd27a; }
