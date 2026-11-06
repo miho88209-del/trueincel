@@ -121,7 +121,7 @@ function newGame() {
     rac: { x: -999, state: 'hidden', t: 0, face: 1, cd: 0, side: 1, loot: null },
     cupObj: null, hatObj: null, groundCan: null,
     woods: [
-      { x: 420, n: 3, kind: 'pile' }, { x: 690, n: 2, kind: 'pile' }, { x: 1460, n: 4, kind: 'tree' },
+      { x: 250, n: 2, kind: 'pile' }, { x: 420, n: 3, kind: 'pile' }, { x: 690, n: 2, kind: 'pile' }, { x: 1460, n: 4, kind: 'tree' },
       { x: 1700, n: 2, kind: 'pile' }, { x: 2360, n: 3, kind: 'pile' }, { x: 2620, n: 2, kind: 'pile' },
     ],
     cacti: [{ x: 300, n: 2 }, { x: 1580, n: 2 }, { x: 2500, n: 1 }],
@@ -231,7 +231,7 @@ function getActions() {
 
 function feedFire() {
   const p = G.p, f = G.fire;
-  if (p.wood > 0) { p.wood--; f.fuel = Math.min(100, f.fuel + 28); G.stats.logs++; }
+  if (p.wood > 0) { p.wood--; f.fuel = Math.min(100, f.fuel + 25); G.stats.logs++; }
   else { p.weeds--; f.fuel = Math.min(100, f.fuel + 14); }
   G.tut.fed = true; f.flare = 1; Sound.feed(); sparks(f.x, groundY(f.x) - 20, 18);
 }
@@ -248,7 +248,7 @@ function relight() {
     toast(`Fssst. The rain ate your match. Crouch [S] to shield the next one. (${p.matches} left)`, '#ff9a6a');
     return;
   }
-  if (f.fuel < 5) { if (p.wood > 0) { p.wood--; f.fuel = 28; G.stats.logs++; } else { p.weeds--; f.fuel = 14; } }
+  if (f.fuel < 5) { if (p.wood > 0) { p.wood--; f.fuel = 25; G.stats.logs++; } else { p.weeds--; f.fuel = 14; } }
   f.lit = true; f.flare = 1; sparks(f.x, BASE_Y - 20, 20); Sound.feed();
   say(pick(['Let there be fire.', 'Still got it.', 'Burn, baby. Burn.']));
 }
@@ -309,7 +309,7 @@ function update(dt) {
 
   // fire
   if (f.lit) {
-    f.fuel -= (0.42 + G.storm * 0.5 + G.gust * 2.5) * dt;
+    f.fuel -= (0.45 + G.storm * 0.55 + G.gust * 2.5) * dt;
     if (f.fuel <= 0) { f.fuel = 0; f.lit = false; f.ember = 1; toast(`The fire's out! Press E at the fire to strike a match (${p.matches} left).`, '#ff7a5a', 6); Sound.fizzle(); puff(f.x, BASE_Y - 20, [90, 90, 100], 14, 30); }
     else if (f.fuel < 20 && beat('lowfire' + Math.floor(t / 40))) toast('The fire\'s burnin\' low. Feed it with E.', '#ffb070');
   }
@@ -328,14 +328,14 @@ function update(dt) {
   const near = clamp(1 - d / 200, 0, 1);
   let gain = near * heat * 6.5 + f.flare * near * 3;
   if (Math.abs(p.x - G.horse.x) < 70 && G.night > 0.3) gain += 0.7;
-  let cold = 0.12 + G.night * 0.9 + G.storm * 0.6;
+  let cold = 0.15 + G.night * 0.95 + G.storm * 0.7;
   if (!p.hat) cold *= 1.35;
   if (p.blanket) cold *= 0.6;
   if (p.belly <= 0) cold *= 1.6;
   if (inWash(p.x) && G.flood.level > 0.3) cold *= 1.6;
   if (p.crouch) cold *= 0.9;
   p.warmth = clamp(p.warmth + (gain - cold) * dt, 0, 100);
-  p.belly = clamp(p.belly - (p.running ? 0.3 : 0.13) * dt, 0, 100);
+  p.belly = clamp(p.belly - (p.running ? 0.34 : 0.17) * dt, 0, 100);
   if (p.belly <= 0 && !p.bellyWarned) { p.bellyWarned = true; toast('Your stomach is growlin\' louder than the thunder. Starvin\' makes the cold bite harder. Eat something [F]!', '#ff9a6a', 6); }
   if (p.belly > 5) p.bellyWarned = false;
   if (p.warmth < 25 && beat('coldwarn' + Math.floor(t / 30))) toast('You\'re freezin\'! Get close to the fire.', '#9ad0ff');
@@ -662,6 +662,8 @@ function render() {
     const gl = ctx.createRadialGradient(W * 0.85, BASE_Y, 20, W * 0.85, BASE_Y, 700);
     gl.addColorStop(0, `rgba(255,210,140,${0.7 * dawn})`); gl.addColorStop(1, 'rgba(255,150,100,0)');
     ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+    const ry = lerp(600, 380, smooth(515, 570, t));
+    ctx.fillStyle = `rgba(255,236,190,${dawn})`; ctx.beginPath(); ctx.arc(W * 0.85, ry, 40, 0, 7); ctx.fill();
   }
   drawClouds(t);
   // landscape layers
@@ -1251,6 +1253,7 @@ function frame(now) {
     updObjects(rawDt); updParticles(rawDt);
     render();
   } else if (mode === 'paused' || mode === 'won' || mode === 'lost') {
+    if (mode === 'won' && G.t < 575) { G.t += rawDt * 4; G.storm = 0; G.night = 0; G.dark = 0.08; G.rain.length = 0; }
     render();
   }
   for (const k in pressed) delete pressed[k];
