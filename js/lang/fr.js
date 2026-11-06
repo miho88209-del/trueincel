@@ -204,4 +204,14 @@ window.LANGS.fr = {
   beans_horse: 'mangés par Biscuit le cheval',
   beans_raccoon: 'volés par un raton laveur',
   beans_flood: 'emportés par une crue soudaine',
+  // multiplayer
+  mp_name: 'Ton nom',
+  mp_offline: 'Solo. Pour jouer entre amis, lance le jeu avec python3 server.py.',
+  mp_online: 'Multijoueur : {n} connecté(s)',
+  mp_riding: '{names} déjà en selle. Tu rejoindras la même nuit.',
+  mp_joined: '{name} arrive dans le canyon.',
+  mp_left: '{name} est reparti.',
+  mp_froze: '{name} est mort de froid. Garde ton feu allumé, l’ami.',
+  mp_pause_note: 'Multijoueur : la nuit continue pendant ta pause.',
+  beans_friend: 'mangés par {name}',
 };

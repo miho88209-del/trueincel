@@ -37,6 +37,10 @@
     <div class="langrow"><span data-i18n="title_language"></span>
       <button class="langbtn" data-lang="en">English</button><button class="langbtn" data-lang="fr">Français</button><button class="langbtn" data-lang="ru">Русский</button>
     </div>
+    <div class="mprow">
+      <label id="mpNameRow" class="hidden"><span data-i18n="mp_name"></span><input id="mpName" type="text" maxlength="16" spellcheck="false" autocomplete="off"></label>
+      <div id="mpStatus"></div>
+    </div>
     <button id="startBtn" class="big" data-i18n="title_start"></button>
     <div class="controls">
       <span data-i18n="ctl_move"></span><span data-i18n="ctl_look"></span><span data-i18n="ctl_sprint"></span>
@@ -50,6 +54,7 @@
 <div id="pause" class="overlay hidden">
   <div class="card">
     <h2 data-i18n="pause_title"></h2>
+    <p id="mpPauseNote" class="hint hidden" data-i18n="mp_pause_note"></p>
     <div class="btnrow"><button id="resumeBtn" class="big" data-i18n="pause_resume"></button><button id="restartBtn" data-i18n="pause_restart"></button></div>
     <div class="langrow"><span data-i18n="title_language"></span>
       <button class="langbtn" data-lang="en">English</button><button class="langbtn" data-lang="fr">Français</button><button class="langbtn" data-lang="ru">Русский</button>

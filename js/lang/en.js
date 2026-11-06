@@ -204,4 +204,14 @@ window.LANGS.en = {
   beans_horse: 'eaten by Biscuit the horse',
   beans_raccoon: 'stolen by a raccoon',
   beans_flood: 'washed away in a flash flood',
+  // multiplayer
+  mp_name: 'Your name',
+  mp_offline: 'Solo. To ride with friends, start the game with python3 server.py.',
+  mp_online: 'Multiplayer: {n} connected',
+  mp_riding: '{names} already riding. You will join the same night.',
+  mp_joined: '{name} rode into the canyon.',
+  mp_left: '{name} rode off.',
+  mp_froze: '{name} froze stiff. Keep your fire going, partner.',
+  mp_pause_note: 'Multiplayer: the night goes on while you are paused.',
+  beans_friend: 'eaten by {name}',
 };

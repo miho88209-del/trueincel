@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Net } from './net.js';
 
 const I18N = window.I18N, Sound = window.Sound;
 const qs = new URLSearchParams(location.search);
@@ -449,15 +450,15 @@ const wagon = { x: WAGON.x, z: WAGON.z, searched: false, boards: 4, boardMeshes:
 }
 
 // ---------- characters ----------
-function makeCowboy() {
+function makeCowboy(coatC = 0x6e4a2e) {
   const g = new THREE.Group(); scene.add(g);
   const body = new THREE.Group(); g.add(body);
-  const coat = mat(0x6e4a2e), pants = mat(0x3a3a48), skin = mat(0xc98d5e), boot = mat(0x2a1a10), band = mat(0xa3262a);
+  const coat = mat(coatC), pants = mat(0x3a3a48), skin = mat(0xc98d5e), boot = mat(0x2a1a10), band = mat(0xa3262a);
   const limb = (x, y, r, l, m) => { const p = new THREE.Group(); p.position.set(x, y, 0); body.add(p); mesh(new THREE.CapsuleGeometry(r, l, 4, 8), m, 0, -l / 2 - r, 0, p); return p; };
   const legL = limb(-0.12, 0.95, 0.085, 0.72, pants), legR = limb(0.12, 0.95, 0.085, 0.72, pants);
   for (const lg of [legL, legR]) mesh(new THREE.BoxGeometry(0.15, 0.12, 0.28), boot, 0, -0.9, 0.05, lg);
   mesh(new THREE.CapsuleGeometry(0.21, 0.42, 4, 10), coat, 0, 1.35, 0, body);
-  const skirt = mesh(new THREE.CylinderGeometry(0.24, 0.34, 0.6, 10, 1, true), mat(0x6e4a2e, { side: THREE.DoubleSide }), 0, 0.93, 0, body);
+  const skirt = mesh(new THREE.CylinderGeometry(0.24, 0.34, 0.6, 10, 1, true), mat(coatC, { side: THREE.DoubleSide }), 0, 0.93, 0, body);
   const armL = limb(-0.3, 1.55, 0.065, 0.5, coat), armR = limb(0.3, 1.55, 0.065, 0.5, coat);
   mesh(new THREE.ConeGeometry(0.17, 0.16, 8), band, 0, 1.66, 0.02, body).rotation.x = Math.PI;
   const head = mesh(new THREE.SphereGeometry(0.15, 12, 10), skin, 0, 1.84, 0, body);
@@ -523,7 +524,7 @@ const washWater = (() => {
 // ---------- game state ----------
 let G = null;
 let mode = 'loading';
-const keys = {}, pressed = {};
+const keys = {}, pressed = {}, KEYS = keys;
 const cam = { yaw: Math.PI, pitch: 0.28, dist: 6.5, curDist: 6.5 };
 
 function newGame() {
@@ -542,6 +543,7 @@ function newGame() {
     flood: { state: 'none', t: 0, level: 0 }, gustS: { state: 'none', t: 0 },
     stats: { logs: 0, matches: 0, swept: 0, hats: 0, cups: 0, pets: 0, toots: 0, beans: { k: 'beans_never' } },
     tut: { moved: false, gathered: false, fed: false }, beats: {}, musicStep: 0,
+    flashN: 0, seen: { fx: 0, gs: 'none', fl: 'none' }, synced: false,
   };
   for (const w of woodSources) { w.n = w.logs.length; w.logs.forEach(l => l.visible = true); }
   for (const c of cacti) { c.n = c.fruits.length; c.fruits.forEach(f => f.visible = true); }
@@ -591,7 +593,7 @@ function getActions() {
     else if (!hasFuel && p.letters && f.fuel < 30) add('E', 'p_letters', null, CAMP.x, CAMP.z, burnLetters);
     if (p.canvas && !f.tarp && hasFuel) add('E', 'p_rig_canvas', null, CAMP.x, CAMP.z + 0.5, rigCanvas);
     if (p.can && !f.can) add('F', 'p_heat_beans', null, CAMP.x, CAMP.z, placeBeans);
-    if (f.can) add('F', 'p_eat_fire_beans', { state: { k: canState(f.can) } }, CAMP.x, CAMP.z, () => { const c = f.can; f.can = null; eatCan(c); });
+    if (f.can) add('F', 'p_eat_fire_beans', { state: { k: canState(f.can) } }, CAMP.x, CAMP.z, () => { const c = f.can; world('takeCan'); eatCan(c); });
   }
   for (const w of woodSources) {
     if (w.n > 0 && Math.hypot(p.x - w.x, p.z - w.z) < (w.kind === 'tree' ? 2.2 : 1.9)) {
@@ -601,20 +603,20 @@ function getActions() {
     }
   }
   for (const c of cacti) if (c.n > 0 && Math.hypot(p.x - c.x, p.z - c.z) < 1.9) add('E', 'p_pear', null, c.x, c.z, () => {
-    c.n--; c.fruits[c.n].visible = false; p.pears++; p.warmth = Math.max(1, p.warmth - 2); Sound.ouch(); say('s_ow');
+    world('pear', { i: cacti.indexOf(c) }); p.pears++; p.warmth = Math.max(1, p.warmth - 2); Sound.ouch(); say('s_ow');
   });
   if (dist(p, WAGON) < 3.4) {
     if (!wagon.searched) add('E', 'p_search_wagon', null, WAGON.x, WAGON.z, searchWagon);
     else if (wagon.boards > 0 && p.wood + p.wetWood < MAX_WOOD) add('E', 'p_boards', { n: wagon.boards }, WAGON.x, WAGON.z, () => {
-      wagon.boards--; wagon.boardMeshes[wagon.boards].visible = false; p.wood++; Sound.wood(); puff(WAGON.x, groundH(WAGON.x, WAGON.z) + 1, WAGON.z, 6);
+      world('board'); p.wood++; Sound.wood(); puff(WAGON.x, groundH(WAGON.x, WAGON.z) + 1, WAGON.z, 6);
     });
   }
   const h = G.horse;
   if (dist(p, h) < 2.6 && p.petCD <= 0) add('E', 'p_pet', null, h.x, h.z, () => { p.petCD = 6; G.stats.pets++; p.warmth = clamp(p.warmth + 4, 0, 100); Sound.snort(); say('s_pet'); });
-  if (G.cupObj && G.cupObj.landed && dist(p, G.cupObj) < 1.8 && G.rac.state !== 'play') add('E', 'p_cup', null, G.cupObj.x, G.cupObj.z, () => { G.cupObj = null; p.cup = true; Sound.clink(); });
+  if (G.cupObj && G.cupObj.landed && dist(p, G.cupObj) < 1.8 && G.rac.state !== 'play') add('E', 'p_cup', null, G.cupObj.x, G.cupObj.z, () => { world('cupTake'); p.cup = true; Sound.clink(); });
   if (G.hatObj && G.hatObj.landed && dist(p, G.hatObj) < 1.8) add('E', 'p_hat', null, G.hatObj.x, G.hatObj.z, () => { G.hatObj = null; p.hat = true; Sound.hat(); say('s_hat_back'); });
-  if (G.groundCan && dist(p, G.groundCan) < 1.8) add('E', 'p_pick_beans', null, G.groundCan.x, G.groundCan.z, () => { p.can = G.groundCan.can; G.groundCan = null; Sound.pickup(); });
-  if (p.cup) add('Q', 'p_throw_cup', null, null, null, throwCup, 99);
+  if (G.groundCan && dist(p, G.groundCan) < 1.8) add('E', 'p_pick_beans', null, G.groundCan.x, G.groundCan.z, () => { p.can = G.groundCan.can; world('gcTake'); Sound.pickup(); });
+  if (p.cup && !G.cupObj) add('Q', 'p_throw_cup', null, null, null, throwCup, 99);
   if (!f.can || df >= 2.8) {
     if (p.can && p.belly < 60) add('F', 'p_eat_pack_beans', { state: { k: canState(p.can) } }, null, null, () => { const c = p.can; p.can = null; eatCan(c); }, 98);
     else if (p.peaches > 0) add('F', 'p_eat_peaches', null, null, null, () => { p.peaches--; p.belly = clamp(p.belly + 35, 0, 100); Sound.eat(); say('s_peaches'); }, 98);
@@ -623,7 +625,7 @@ function getActions() {
   return acts;
 }
 function gatherWood(w) {
-  const p = G.p; w.n--; w.logs[w.n].visible = false;
+  const p = G.p; world('wood', { i: woodSources.indexOf(w) });
   const wet = (w.kind === 'drift' && G.storm > 0.2) || (w.kind !== 'dry' && G.storm > 0.5);
   if (wet) { p.wetWood++; if (beat('wetwood')) toast('t_wet_wood', null, '#9ad0ff', 7); } else p.wood++;
   G.tut.gathered = true; Sound.wood(); puff(w.x, groundH(w.x, w.z) + 0.3, w.z, 5, 0.6);
@@ -631,22 +633,23 @@ function gatherWood(w) {
 }
 function feedFire() {
   const p = G.p, f = G.fire;
-  if (p.wood > 0) { p.wood--; f.fuel = Math.min(100, f.fuel + 25); Sound.feed(); sparks(22); }
-  else { p.wetWood--; f.fuel = Math.min(100, f.fuel + 12); Sound.hiss(); for (let i = 0; i < 12; i++) emit(smoke, CAMP.x, camp.position.y + 0.6, CAMP.z, rand(-0.4, 0.4), rand(1, 2), rand(-0.4, 0.4), rand(2, 4)); say('s_wet_wood'); }
-  G.stats.logs++; G.tut.fed = true; f.flare = 1;
+  if (p.wood > 0) { p.wood--; world('fuel', { add: 25 }); Sound.feed(); sparks(22); }
+  else { p.wetWood--; world('fuel', { add: 12 }); Sound.hiss(); for (let i = 0; i < 12; i++) emit(smoke, CAMP.x, camp.position.y + 0.6, CAMP.z, rand(-0.4, 0.4), rand(1, 2), rand(-0.4, 0.4), rand(2, 4)); say('s_wet_wood'); }
+  G.stats.logs++; G.tut.fed = true;
 }
-function rigCanvas() { G.p.canvas = false; G.fire.tarp = true; tarp.visible = true; Sound.hat(); toast('t_canvas_rigged', null, '#ffd27a'); }
-function burnLetters() { const p = G.p, f = G.fire; p.letters = false; f.fuel = Math.min(100, f.fuel + 18); f.flare = 1; Sound.feed(); sparks(30); say('s_letters', null, 4); }
+function rigCanvas() { G.p.canvas = false; world('tarp'); Sound.hat(); toast('t_canvas_rigged', null, '#ffd27a'); }
+function burnLetters() { const p = G.p; p.letters = false; world('fuel', { add: 18 }); Sound.feed(); sparks(30); say('s_letters', null, 4); }
 function relight() {
   const p = G.p, f = G.fire; p.matches--; G.stats.matches++; Sound.match();
   const fail = (p.crouch || f.tarp) ? 0 : G.storm * 0.65;
   if (Math.random() < fail) { Sound.fizzle(); puff(CAMP.x, camp.position.y + 0.5, CAMP.z, 6, 0.5); toast('t_match_fizzle', { n: p.matches }, '#ff9a6a'); return; }
-  if (f.fuel < 5) { if (p.wood > 0) { p.wood--; f.fuel = 25; } else { p.wetWood--; f.fuel = 12; } G.stats.logs++; }
-  f.lit = true; f.flare = 1; sparks(20); Sound.feed(); say('s_relight');
+  let fuel = null;
+  if (f.fuel < 5) { if (p.wood > 0) { p.wood--; fuel = 25; } else { p.wetWood--; fuel = 12; } G.stats.logs++; }
+  world('relight', { fuel }); sparks(20); Sound.feed(); say('s_relight');
 }
-function placeBeans() { const p = G.p; G.fire.can = p.can; p.can = null; Sound.clink(); say('s_supper'); if (beat('beansHint')) toast('t_beans_on', null, '#ffd27a', 6); }
+function placeBeans() { const p = G.p; world('placeCan', { can: p.can }); p.can = null; Sound.clink(); say('s_supper'); if (beat('beansHint')) toast('t_beans_on', null, '#ffd27a', 6); }
 function searchWagon() {
-  const p = G.p; wagon.searched = true; wagon.cover.visible = false; wagon.glint.intensity = 0;
+  const p = G.p; world('wagon');
   p.canvas = true; p.matches += 3; p.peaches += 1; p.blanket = true; cowboy.blanket.visible = true; Sound.pickup();
   toast('t_wagon_loot', null, '#ffd27a', 7); say('s_wagon');
 }
@@ -654,8 +657,139 @@ const _fwd = new THREE.Vector3();
 function throwCup() {
   const p = G.p; p.cup = false; G.stats.cups++;
   camera.getWorldDirection(_fwd); _fwd.y = 0; _fwd.normalize();
-  G.cupObj = { x: p.x + _fwd.x * 0.5, y: groundH(p.x, p.z) + 1.6, z: p.z + _fwd.z * 0.5, vx: _fwd.x * 11, vy: 5, vz: _fwd.z * 11, landed: false, rot: 0 };
+  world('cupThrow', { o: { x: p.x + _fwd.x * 0.5, y: groundH(p.x, p.z) + 1.6, z: p.z + _fwd.z * 0.5, vx: _fwd.x * 11, vy: 5, vz: _fwd.z * 11, landed: false, rot: 0 } });
   Sound.hat(); say('s_throw', null, 2);
+}
+
+// ---------- multiplayer ----------
+// One browser (the host, picked by server.py) simulates the shared world: clock, weather, fire, horse,
+// raccoon, firewood, wagon. Everyone simulates their own cowboy. Guests send world changes as ops and
+// mirror the host's snapshots in between.
+const remotes = new Map(); // id -> friend's cowboy
+const COATS = [0x2e4a6e, 0x4a6a2a, 0x7a2e4a, 0x5a5a5a, 0x2a6a6a, 0x8a6a2a];
+const nameCache = new Map();
+const nameOf = id => { const r = Net.roster.find(q => q.id === id); return r ? r.name : nameCache.get(id) || '?'; };
+const riders = () => [G.p, ...[...remotes.values()].filter(r => r.playing && r.seen)];
+let holdSnap = 0; // ignore snapshots briefly after a predicted op so things don't flicker back
+
+function applyOp(op, a, from) {
+  const f = G.fire;
+  switch (op) {
+    case 'fuel': f.fuel = Math.min(100, f.fuel + a.add); f.flare = 1; break;
+    case 'relight': f.lit = true; f.flare = 1; if (a.fuel != null) f.fuel = a.fuel; break;
+    case 'tarp': f.tarp = true; tarp.visible = true; break;
+    case 'placeCan': if (!f.can) f.can = a.can; break;
+    case 'takeCan': f.can = null; if (from) G.stats.beans = { k: 'beans_friend', p: { name: nameOf(from) }, id: from }; break;
+    case 'wood': { const w = woodSources[a.i]; if (w && w.n > 0) { w.n--; w.logs[w.n].visible = false; } break; }
+    case 'pear': { const c = cacti[a.i]; if (c && c.n > 0) { c.n--; c.fruits[c.n].visible = false; } break; }
+    case 'wagon': wagon.searched = true; wagon.cover.visible = false; wagon.glint.intensity = 0; break;
+    case 'board': if (wagon.boards > 0) { wagon.boards--; wagon.boardMeshes[wagon.boards].visible = false; } break;
+    case 'cupThrow': if (!G.cupObj) G.cupObj = a.o; break;
+    case 'cupTake': G.cupObj = null; break;
+    case 'gcTake': G.groundCan = null; break;
+    case 'scare': if (['lurk', 'sneak', 'grab', 'play', 'lured'].includes(G.rac.state)) scareRac(a.k); break;
+  }
+}
+function world(op, a = {}) {
+  if (!Net.isGuest()) return applyOp(op, a, null);
+  if (op !== 'scare') applyOp(op, a, null); // predict locally; the host's toast covers the scare
+  Net.send({ t: 'op', op, a }); holdSnap = performance.now() + 350;
+}
+// world toasts and sounds, mirrored to guests
+function wtoast(k, p, color, dur) { toast(k, p, color, dur); if (Net.online) Net.send({ t: 'toast', k, p, color, dur }); }
+function playFx(n) {
+  const h = G.horse;
+  if (n === 'horseToot') { Sound.toot(true); puff(h.x - Math.sin(h.face) * 1.2, groundH(h.x, h.z) + 1.3, h.z - Math.cos(h.face) * 1.2, 12, 0.8); }
+  else if (n === 'sparks') sparks(25);
+  else if (Sound[n]) Sound[n]();
+}
+function fx(n) { playFx(n); if (Net.online) Net.send({ t: 'fx', n }); }
+
+const TIMED_BEATS = [['tut1', 3], ['howl1', 40], ['tut5', 55], ['storm', 110], ['rain', 172], ['dark', 235], ['dawn', 470], ['howl2', 492]];
+function worldSnap() {
+  const f = G.fire, T = G.timers;
+  let bf = G.stats.beans;
+  if (bf.k === 'beans_you' || bf.k === 'beans_half') bf = { k: 'beans_friend', p: { name: Net.name }, id: Net.id };
+  return { t: 'w', T: G.t, tm: [T.lightning, T.gust, T.flood], fl: G.flood, gs: G.gustS, gu: G.gust, fx: G.flashN,
+    f: { fuel: f.fuel, lit: f.lit, can: f.can, flare: f.flare, ember: f.ember, tarp: f.tarp },
+    h: G.horse, r: { ...G.rac, spot: sageSpots.indexOf(G.rac.spot) }, cup: G.cupObj, gc: G.groundCan,
+    ws: woodSources.map(w => w.n), cc: cacti.map(c => c.n), wg: [wagon.searched, wagon.boards], bf };
+}
+function applyWorld(m) {
+  if (!G || !['play', 'paused', 'lost'].includes(mode) || !Net.isGuest() || m.from !== Net.hostId) return;
+  const S = G.seen;
+  if (!G.synced) { G.synced = true; S.fx = m.fx; S.gs = m.gs.state; S.fl = m.fl.state; }
+  if (m.T - G.t > 2) for (const [b, at] of TIMED_BEATS) if (m.T > at + 2) G.beats[b] = true;
+  G.t = m.T;
+  if (performance.now() < holdSnap) return;
+  restoreWorld(m);
+}
+function restoreWorld(m) {
+  G.t = m.T;
+  [G.timers.lightning, G.timers.gust, G.timers.flood] = m.tm;
+  G.flood = m.fl; G.gustS = m.gs; G.gust = m.gu; G.flashN = m.fx;
+  const f = G.fire, wasLit = f.lit;
+  Object.assign(f, m.f); tarp.visible = f.tarp;
+  if (wasLit && !f.lit && mode !== 'lost') { toast('t_fire_out', { n: G.p.matches }, '#ff7a5a', 6); Sound.fizzle(); }
+  const h = G.horse, r = G.rac;
+  Object.assign(h, m.h, { x: h.x, z: h.z, walk: h.walk, tx: m.h.x, tz: m.h.z });
+  Object.assign(r, m.r, { x: r.x, z: r.z, tx: m.r.x, tz: m.r.z, spot: sageSpots[m.r.spot] || null });
+  G.cupObj = m.cup; G.groundCan = m.gc;
+  m.ws.forEach((n, i) => { const w = woodSources[i]; w.n = n; w.logs.forEach((l, j) => { l.visible = j < n; }); });
+  m.cc.forEach((n, i) => { const c = cacti[i]; c.n = n; c.fruits.forEach((fr, j) => { fr.visible = j < n; }); });
+  if (m.wg[0] && !wagon.searched) { wagon.searched = true; wagon.cover.visible = false; wagon.glint.intensity = 0; }
+  wagon.boards = m.wg[1]; wagon.boardMeshes.forEach((b, j) => { b.visible = j < wagon.boards; });
+  const bf = m.bf, mine = G.stats.beans.k;
+  if (bf && bf.id !== Net.id && mine !== 'beans_you' && mine !== 'beans_half' && ['beans_horse', 'beans_raccoon', 'beans_flood', 'beans_friend'].includes(bf.k)) G.stats.beans = bf;
+}
+const inGame = () => G && (mode === 'play' || mode === 'paused');
+Net.on('w', applyWorld);
+Net.on('op', m => { if (inGame() && !Net.isGuest()) applyOp(m.op, m.a || {}, m.from); });
+Net.on('toast', m => { if (inGame() && m.from === Net.hostId) toast(m.k, m.p, m.color, m.dur); });
+Net.on('fx', m => { if (inGame() && m.from === Net.hostId) playFx(m.n); });
+Net.on('give', m => { if (inGame() && m.can) { G.p.can = m.can; toast('t_raccoon_catch', null, '#ffd27a', 6); } });
+Net.on('froze', m => { if (inGame()) toast('mp_froze', { name: nameOf(m.from) }, '#9ad0ff', 6); });
+Net.on('p', m => {
+  let r = remotes.get(m.from);
+  if (!r) { r = { cb: makeCowboy(COATS[m.from % COATS.length]), walk: 0, playing: false, seen: false }; r.cb.g.visible = false; remotes.set(m.from, r); }
+  if (!r.seen || Math.hypot(m.x - r.x, m.z - r.z) > 6) { r.x = m.x; r.z = m.z; }
+  Object.assign(r, { id: m.from, tx: m.x, tz: m.z, face: m.face, moving: m.mv, running: m.rn, crouch: m.cr, hat: m.hat, blanket: m.bl, warmth: m.w, seen: true });
+  r.playing = !!(Net.roster.find(q => q.id === m.from) || {}).playing;
+});
+let prevRiding = new Set();
+Net.onRoster(() => {
+  for (const q of Net.roster) nameCache.set(q.id, q.name);
+  const riding = new Set(Net.roster.filter(q => q.playing && q.id !== Net.id).map(q => q.id)), ids = new Set(Net.roster.map(q => q.id));
+  if (inGame()) {
+    for (const id of riding) if (!prevRiding.has(id)) toast('mp_joined', { name: nameOf(id) }, '#ffe6b0');
+    for (const id of prevRiding) if (!ids.has(id)) toast('mp_left', { name: nameOf(id) }, '#ffe6b0');
+  }
+  prevRiding = riding;
+  for (const [id, r] of remotes) {
+    if (!ids.has(id)) { scene.remove(r.cb.g); remotes.delete(id); } else r.playing = riding.has(id);
+  }
+  updateMpStatus();
+});
+function updateMpStatus() {
+  $('mpStatus').textContent = !Net.online ? I18N.t('mp_offline') : I18N.t('mp_online', { n: Net.roster.length }) +
+    (Net.othersPlaying() ? ' · ' + I18N.t('mp_riding', { names: Net.others().filter(q => q.playing).map(q => q.name).join(', ') }) : '');
+  $('mpNameRow').classList.toggle('hidden', !Net.online);
+}
+let netT = 0;
+function updNet(dt) {
+  const k = clamp(dt * 10, 0, 1);
+  const follow = o => { if (o.tx === undefined) return; if (Math.hypot(o.tx - o.x, o.tz - o.z) > 6) { o.x = o.tx; o.z = o.tz; } else { o.x = lerp(o.x, o.tx, k); o.z = lerp(o.z, o.tz, k); } };
+  if (Net.isGuest() && G) {
+    follow(G.horse); follow(G.rac);
+    const h = G.horse; if (Math.hypot(h.tx - h.x, h.tz - h.z) > 0.05) h.walk += dt * 6;
+  }
+  for (const r of remotes.values()) { follow(r); if (r.moving) r.walk += dt * (r.running ? 7.2 : 4.4) * 2.2; }
+  netT += dt;
+  if (!Net.online || netT < 0.1 || !inGame()) return;
+  netT = 0;
+  const p = G.p;
+  Net.send({ t: 'p', x: p.x, z: p.z, face: p.face, mv: p.moving, rn: p.running, cr: p.crouch, hat: p.hat, bl: p.blanket, w: Math.round(p.warmth) });
+  if (!Net.isGuest() && Net.others().length) Net.send(worldSnap());
 }
 
 // ---------- update ----------
@@ -686,7 +820,8 @@ function update(dt) {
   // fire
   if (f.lit) {
     f.fuel -= (0.45 + G.storm * 0.55 * (f.tarp ? 0.35 : 1) + G.gust * 2.0) * dt;
-    if (f.fuel <= 0) { f.fuel = 0; f.lit = false; f.ember = 1; toast('t_fire_out', { n: p.matches }, '#ff7a5a', 6); Sound.fizzle(); for (let i = 0; i < 15; i++) emit(smoke, CAMP.x, camp.position.y + 0.4, CAMP.z, rand(-0.3, 0.3), rand(1, 2), rand(-0.3, 0.3), rand(2, 4)); }
+    if (f.fuel <= 0 && Net.isGuest()) f.fuel = 0.01;
+    else if (f.fuel <= 0) { f.fuel = 0; f.lit = false; f.ember = 1; toast('t_fire_out', { n: p.matches }, '#ff7a5a', 6); Sound.fizzle(); for (let i = 0; i < 15; i++) emit(smoke, CAMP.x, camp.position.y + 0.4, CAMP.z, rand(-0.3, 0.3), rand(1, 2), rand(-0.3, 0.3), rand(2, 4)); }
     else if (f.fuel < 20 && beat('lowfire' + Math.floor(t / 40))) toast('t_fire_low', null, '#ffb070');
   }
   f.ember = Math.max(0, f.ember - dt * 0.05); f.flare = Math.max(0, f.flare - dt * 1.5);
@@ -727,7 +862,8 @@ function update(dt) {
   if (p.sayT > 0) p.sayT -= dt;
   p.petCD -= dt;
 
-  updHorse(dt); updRac(dt); updEvents(dt); updObjects(dt);
+  if (!Net.isGuest()) { updHorse(dt); updRac(dt); }
+  updEvents(dt); updObjects(dt);
 
   // audio
   G.timers.music -= dt;
@@ -749,7 +885,7 @@ function playMusicStep(vol) {
 }
 
 function movePlayer(dt) {
-  const p = G.p;
+  const p = G.p, keys = mode === 'play' ? KEYS : {};
   let ix = 0, iz = 0;
   if (keys.KeyW || keys.ArrowUp) iz += 1; if (keys.KeyS || keys.ArrowDown) iz -= 1;
   if (keys.KeyD) ix += 1; if (keys.KeyA) ix -= 1;
@@ -792,21 +928,21 @@ function movePlayer(dt) {
 function playerToot() {
   const p = G.p; G.stats.toots++; Sound.toot(false); puff(p.x, groundH(p.x, p.z) + 0.8, p.z, 8, 0.6);
   const r = G.rac;
-  if (['lurk', 'sneak', 'grab', 'play', 'lured'].includes(r.state) && dist(r, p) < 12) scareRac('t_raccoon_gag');
+  if (['lurk', 'sneak', 'grab', 'play', 'lured'].includes(r.state) && dist(r, p) < 12) world('scare', { k: 't_raccoon_gag' });
   if (dist(G.horse, p) < 4) { say('s_pardon_horse'); later(0.8, () => Sound.snort()); }
-  else if (dist(p, CAMP) < 3 && G.fire.lit) { G.fire.fuel = Math.min(100, G.fire.fuel + 5); G.fire.flare = 1; sparks(12); say('s_eyebrows'); }
+  else if (dist(p, CAMP) < 3 && G.fire.lit) { world('fuel', { add: 5 }); sparks(12); say('s_eyebrows'); }
   else say('s_toot');
 }
 
 function updHorse(dt) {
   const h = G.horse, f = G.fire, p = G.p; h.t += dt;
-  const away = dist(p, CAMP) > 14;
+  const away = riders().every(q => dist(q, CAMP) > 14);
   if (h.rear > 0) h.rear -= dt;
   if (h.gassy > 0) {
     h.gassy -= dt; h.tootT -= dt;
     if (h.tootT <= 0) {
-      h.tootT = rand(9, 14); Sound.toot(true); puff(h.x - Math.sin(h.face) * 1.2, groundH(h.x, h.z) + 1.3, h.z - Math.cos(h.face) * 1.2, 12, 0.8);
-      if (dist(h, CAMP) < 10 && f.lit) { f.fuel = Math.min(100, f.fuel + 10); f.flare = 1; sparks(25); toast(beat('horsefan') ? 't_horse_fan' : 't_horse_fan2', null, '#c8e08a'); }
+      h.tootT = rand(9, 14); fx('horseToot');
+      if (dist(h, CAMP) < 10 && f.lit) { f.fuel = Math.min(100, f.fuel + 10); f.flare = 1; fx('sparks'); wtoast(beat('horsefan') ? 't_horse_fan' : 't_horse_fan2', null, '#c8e08a'); }
       if (['lurk', 'sneak', 'grab', 'play'].includes(G.rac.state) && dist(G.rac, h) < 16) scareRac('t_horse_scare');
     }
   }
@@ -815,23 +951,23 @@ function updHorse(dt) {
   switch (h.state) {
     case 'idle':
       if (dist(h, HORSE_HOME) > 0.2) moveTo(HORSE_HOME.x, HORSE_HOME.z, 1.4); else h.face = lerp(h.face, 1.9, dt);
-      if (f.can && away) { h.awayT += dt; if (h.awayT > 3) { h.state = 'eyeing'; h.t = 0; Sound.snort(); toast('t_horse_eye', null, '#ffb070'); } } else h.awayT = 0;
+      if (f.can && away) { h.awayT += dt; if (h.awayT > 3) { h.state = 'eyeing'; h.t = 0; fx('snort'); wtoast('t_horse_eye', null, '#ffb070'); } } else h.awayT = 0;
       break;
     case 'eyeing':
       h.face = Math.atan2(CAMP.x - h.x, CAMP.z - h.z);
       if (!f.can) h.state = 'idle';
-      else if (!away) { h.state = 'idle'; h.awayT = 0; say('s_dont'); }
+      else if (!away) { h.state = 'idle'; h.awayT = 0; if (dist(p, CAMP) <= 14) say('s_dont'); }
       else if (h.t > 4) { h.state = 'walk'; h.t = 0; }
       break;
     case 'walk':
       if (!f.can) { h.state = 'back'; break; }
-      if (!away) { h.state = 'back'; toast('t_horse_stretch', null, '#c8e08a'); break; }
-      if (moveTo(eatSpot.x, eatSpot.z, 1.6)) { h.state = 'eat'; h.t = 0; Sound.snort(); }
+      if (!away) { h.state = 'back'; wtoast('t_horse_stretch', null, '#c8e08a'); break; }
+      if (moveTo(eatSpot.x, eatSpot.z, 1.6)) { h.state = 'eat'; h.t = 0; fx('snort'); }
       break;
     case 'eat':
       h.face = Math.atan2(CAMP.x - h.x, CAMP.z - h.z);
-      if (!f.can || !away) { h.state = 'back'; if (f.can) toast('t_horse_freeze', null, '#c8e08a'); break; }
-      if (h.t > 3) { f.can = null; G.stats.beans = { k: 'beans_horse' }; h.gassy = 120; h.tootT = 5; h.state = 'back'; toast('t_horse_ate', null, '#ff9a6a', 6); Sound.neigh(); }
+      if (!f.can || !away) { h.state = 'back'; if (f.can) wtoast('t_horse_freeze', null, '#c8e08a'); break; }
+      if (h.t > 3) { f.can = null; G.stats.beans = { k: 'beans_horse' }; h.gassy = 120; h.tootT = 5; h.state = 'back'; wtoast('t_horse_ate', null, '#ff9a6a', 6); fx('neigh'); }
       break;
     case 'back': if (moveTo(HORSE_HOME.x, HORSE_HOME.z, 1.8)) { h.state = 'idle'; h.awayT = 0; } break;
   }
@@ -840,35 +976,39 @@ function updHorse(dt) {
 function scareRac(k) {
   const r = G.rac;
   if (r.state === 'play' && G.cupObj) { G.cupObj.x = r.x; G.cupObj.z = r.z; }
-  r.state = 'flee'; r.t = 0; Sound.chitter();
-  if (k) toast(k, null, '#c8e08a');
+  r.state = 'flee'; r.t = 0; fx('chitter');
+  if (k) wtoast(k, null, '#c8e08a');
 }
 function updRac(dt) {
-  const r = G.rac, p = G.p, f = G.fire; r.t += dt; r.cd -= dt;
-  const dP = dist(p, r);
+  const r = G.rac, f = G.fire; r.t += dt; r.cd -= dt;
+  const p = riders().sort((a, b) => dist(a, r) - dist(b, r))[0], dP = dist(p, r);
   const run = (tx, tz, s) => { const dx = tx - r.x, dz = tz - r.z, dd = Math.hypot(dx, dz); if (dd < 0.15) return true; r.face = Math.atan2(dx, dz); const st = Math.min(dd, s * dt); r.x += dx / dd * st; r.z += dz / dd * st; return false; };
-  if (['lurk', 'sneak', 'grab', 'play', 'lured'].includes(r.state) && dP < 2.8) { scareRac(r.state === 'play' ? 't_raccoon_cupdrop' : 't_raccoon_shoo'); if (beat('shoo')) say('s_shoo'); return; }
+  if (['lurk', 'sneak', 'grab', 'play', 'lured'].includes(r.state) && dP < 2.8) { scareRac(r.state === 'play' ? 't_raccoon_cupdrop' : 't_raccoon_shoo'); if (p === G.p && beat('shoo')) say('s_shoo'); return; }
   const awayFrom = (dx, dz) => { const L = Math.hypot(dx, dz) || 1; return { x: r.x + dx / L * 40, z: r.z + dz / L * 40 }; };
   switch (r.state) {
     case 'hidden':
       if (f.can && f.can.heat > 12 && r.cd <= 0) {
         // the bush farthest from the player
-        const spot = sageSpots.slice().sort((a, b) => dist(b, p) - dist(a, p))[0];
+        const spot = sageSpots.slice().sort((a, b) => dist(b, G.p) - dist(a, G.p))[0];
         r.spot = spot; r.x = spot.x; r.z = spot.z; r.state = 'lurk'; r.t = 0; r.face = Math.atan2(CAMP.x - r.x, CAMP.z - r.z);
-        Sound.rustle(); toast('t_raccoon', null, '#c8e08a');
-        if (beat('cuptip')) later(2.5, () => toast('t_raccoon_tip', null, '#ffd27a', 7));
+        fx('rustle'); wtoast('t_raccoon', null, '#c8e08a');
+        if (beat('cuptip')) later(2.5, () => wtoast('t_raccoon_tip', null, '#ffd27a', 7));
       }
       break;
     case 'lurk': if (!f.can) { r.state = 'leave'; break; } if (r.t > 4) { r.state = 'sneak'; r.t = 0; } break;
-    case 'sneak': if (!f.can) { r.state = 'leave'; break; } if (run(CAMP.x + 0.9, CAMP.z + 0.3, 1.5)) { r.state = 'grab'; r.t = 0; Sound.chitter(); } break;
+    case 'sneak': if (!f.can) { r.state = 'leave'; break; } if (run(CAMP.x + 0.9, CAMP.z + 0.3, 1.5)) { r.state = 'grab'; r.t = 0; fx('chitter'); } break;
     case 'grab':
       if (!f.can) { r.state = 'leave'; break; }
-      if (r.t > 2.5) { r.loot = f.can; f.can = null; r.state = 'carry'; r.t = 0; Sound.chitter(); toast('t_raccoon_grab', null, '#ff9a6a'); r.dest = awayFrom(r.x - p.x, r.z - p.z); }
+      if (r.t > 2.5) { r.loot = f.can; f.can = null; r.state = 'carry'; r.t = 0; fx('chitter'); wtoast('t_raccoon_grab', null, '#ff9a6a'); r.dest = awayFrom(r.x - p.x, r.z - p.z); }
       break;
     case 'carry': {
-      if (dP < 1.6) { r.loot.half = true; p.can = r.loot; r.loot = null; r.state = 'flee'; r.t = 0; Sound.chitter(); toast('t_raccoon_catch', null, '#ffd27a', 6); break; }
+      if (dP < 1.6) {
+        r.loot.half = true;
+        if (p === G.p) { p.can = r.loot; toast('t_raccoon_catch', null, '#ffd27a', 6); } else Net.send({ t: 'give', to: p.id, can: r.loot });
+        r.loot = null; r.state = 'flee'; r.t = 0; fx('chitter'); break;
+      }
       if (!walkable(r.x + Math.sin(r.face) * 1.5, r.z + Math.cos(r.face) * 1.5)) r.dest = awayFrom(CAMP.x - r.x + rand(-5, 5), CAMP.z - r.z + rand(-5, 5));
-      if (run(r.dest.x, r.dest.z, 4.6) || dist(r, CAMP) > 45) { G.stats.beans = { k: 'beans_raccoon' }; r.loot = null; r.state = 'gone'; toast('t_raccoon_gone', null, '#ff9a6a', 7); }
+      if (run(r.dest.x, r.dest.z, 4.6) || dist(r, CAMP) > 45) { G.stats.beans = { k: 'beans_raccoon' }; r.loot = null; r.state = 'gone'; wtoast('t_raccoon_gone', null, '#ff9a6a', 7); }
       break;
     }
     case 'flee': {
@@ -880,7 +1020,7 @@ function updRac(dt) {
     case 'lured':
       if (!G.cupObj) { r.state = 'leave'; break; }
       if (!G.cupObj.landed) break;
-      if (run(G.cupObj.x, G.cupObj.z, 3.6)) { r.state = 'play'; r.t = 0; if (beat('cupplay')) toast('t_raccoon_cup', null, '#c8e08a'); else Sound.chitter(); }
+      if (run(G.cupObj.x, G.cupObj.z, 3.6)) { r.state = 'play'; r.t = 0; if (beat('cupplay')) wtoast('t_raccoon_cup', null, '#c8e08a'); else fx('chitter'); }
       break;
     case 'play':
       if (G.cupObj) { G.cupObj.x = r.x + Math.sin(r.face) * 0.4; G.cupObj.z = r.z + Math.cos(r.face) * 0.4; }
@@ -893,31 +1033,43 @@ function updRac(dt) {
 }
 
 function updEvents(dt) {
-  const p = G.p, f = G.fire, T = G.timers;
-  if (G.storm > 0.35 && G.t > T.lightning) {
-    T.lightning = G.t + rand(5, 14) / Math.max(G.storm, 0.4);
-    G.flash = 1; makeBolt();
-    later(rand(0.3, 1.6), () => Sound.thunder(rand(0.6, 1)));
-    if (G.horse.state === 'idle' && Math.random() < 0.5) { G.horse.rear = 1.2; Sound.neigh(); }
-  }
-  const gs = G.gustS; gs.t += dt;
-  if (gs.state === 'none' && G.storm > 0.45 && G.t > T.gust) { gs.state = 'warn'; gs.t = 0; Sound.whoosh(); toast('t_gust', null, '#9ad0ff', 4); }
-  else if (gs.state === 'warn' && gs.t > 2.6) {
-    gs.state = 'blow'; gs.t = 0; G.gust = 1;
-    if (p.hat && !p.crouch && !p.sheltered) {
-      p.hat = false; G.stats.hats++; Sound.hat();
-      G.hatObj = { x: p.x, y: groundH(p.x, p.z) + 2, z: p.z, vx: rand(5, 7), vy: 4, vz: rand(-2, 2), landed: false, rot: 0 };
-      toast('t_hat_gone', null, '#9ad0ff', 6); say('s_myhat', null, 2);
-    } else if (p.hat) say('s_kepthat');
-    if (f.lit) sparks(30);
-  } else if (gs.state === 'blow' && gs.t > 1.8) { gs.state = 'none'; T.gust = G.t + rand(35, 55); }
-  const fl = G.flood; fl.t += dt;
+  const p = G.p, f = G.fire, T = G.timers, gs = G.gustS, fl = G.flood, S = G.seen;
   const puddle = G.storm * 0.25;
-  if (fl.state === 'none') { fl.level = lerp(fl.level, puddle, dt); if (G.storm > 0.55 && G.t > T.flood) { fl.state = 'warn'; fl.t = 0; Sound.rumble(); toast('t_flood_warn', null, '#ff7a5a', 5); } }
-  else if (fl.state === 'warn') { fl.level = lerp(fl.level, puddle, dt); if (fl.t > 4.5) { fl.state = 'flood'; fl.t = 0; Sound.splash(); } }
-  else if (fl.state === 'flood') {
-    fl.level = fl.t < 1.2 ? lerp(puddle, 1, fl.t / 1.2) : fl.t < 7 ? 1 : lerp(1, puddle, (fl.t - 7) / 2.5);
-    if (fl.t > 9.5) { fl.state = 'none'; T.flood = G.t + rand(45, 70); }
+  if (!Net.isGuest()) {
+    if (G.storm > 0.35 && G.t > T.lightning) {
+      T.lightning = G.t + rand(5, 14) / Math.max(G.storm, 0.4); G.flashN++;
+      if (G.horse.state === 'idle' && Math.random() < 0.5) { G.horse.rear = 1.2; fx('neigh'); }
+    }
+    gs.t += dt;
+    if (gs.state === 'none' && G.storm > 0.45 && G.t > T.gust) { gs.state = 'warn'; gs.t = 0; }
+    else if (gs.state === 'warn' && gs.t > 2.6) { gs.state = 'blow'; gs.t = 0; }
+    else if (gs.state === 'blow' && gs.t > 1.8) { gs.state = 'none'; T.gust = G.t + rand(35, 55); }
+    fl.t += dt;
+    if (fl.state === 'none') { fl.level = lerp(fl.level, puddle, dt); if (G.storm > 0.55 && G.t > T.flood) { fl.state = 'warn'; fl.t = 0; } }
+    else if (fl.state === 'warn') { fl.level = lerp(fl.level, puddle, dt); if (fl.t > 4.5) { fl.state = 'flood'; fl.t = 0; } }
+    else if (fl.state === 'flood') {
+      fl.level = fl.t < 1.2 ? lerp(puddle, 1, fl.t / 1.2) : fl.t < 7 ? 1 : lerp(1, puddle, (fl.t - 7) / 2.5);
+      if (fl.t > 9.5) { fl.state = 'none'; T.flood = G.t + rand(45, 70); }
+    }
+  }
+  if (G.flashN !== S.fx) { S.fx = G.flashN; G.flash = 1; makeBolt(); later(rand(0.3, 1.6), () => Sound.thunder(rand(0.6, 1))); }
+  if (gs.state !== S.gs) {
+    S.gs = gs.state;
+    if (gs.state === 'warn') { Sound.whoosh(); toast('t_gust', null, '#9ad0ff', 4); }
+    else if (gs.state === 'blow') {
+      G.gust = 1;
+      if (p.hat && !p.crouch && !p.sheltered) {
+        p.hat = false; G.stats.hats++; Sound.hat();
+        G.hatObj = { x: p.x, y: groundH(p.x, p.z) + 2, z: p.z, vx: rand(5, 7), vy: 4, vz: rand(-2, 2), landed: false, rot: 0 };
+        toast('t_hat_gone', null, '#9ad0ff', 6); say('s_myhat', null, 2);
+      } else if (p.hat) say('s_kepthat');
+      if (f.lit) sparks(30);
+    }
+  }
+  if (fl.state !== S.fl) {
+    S.fl = fl.state;
+    if (fl.state === 'warn') { Sound.rumble(); toast('t_flood_warn', null, '#ff7a5a', 5); }
+    else if (fl.state === 'flood') Sound.splash();
   }
   if (fl.level > 0.55 && terrainInfo(p.x, p.z).wash > 0.3) {
     const lost = p.wood + p.wetWood;
@@ -947,9 +1099,9 @@ function updObjects(dt) {
     if (c.y <= gy + 0.05) {
       c.y = gy; c.landed = true; Sound.clink();
       const r = G.rac;
-      if (['lurk', 'sneak', 'grab', 'carry'].includes(r.state) && dist(r, c) < 35) {
-        if (r.state === 'carry') { G.groundCan = { x: r.x, z: r.z, can: r.loot }; r.loot = null; toast('t_raccoon_drop', null, '#c8e08a', 6); }
-        r.state = 'lured'; r.t = 0; Sound.chitter();
+      if (!Net.isGuest() && ['lurk', 'sneak', 'grab', 'carry'].includes(r.state) && dist(r, c) < 35) {
+        if (r.state === 'carry') { G.groundCan = { x: r.x, z: r.z, can: r.loot }; r.loot = null; wtoast('t_raccoon_drop', null, '#c8e08a', 6); }
+        r.state = 'lured'; r.t = 0; fx('chitter');
       }
     }
   }
@@ -961,8 +1113,10 @@ function updObjects(dt) {
   }
   const flooded = o => o && terrainInfo(o.x, o.z).wash > 0.3 && G.flood.level > 0.55;
   if (h && h.landed && flooded(h)) { G.hatObj = null; toast('t_hat_float', null, '#9ad0ff'); }
-  if (c && c.landed && flooded(c) && G.rac.state !== 'play') { G.cupObj = null; toast('t_cup_float', null, '#9ad0ff'); }
-  if (flooded(G.groundCan)) { G.groundCan = null; G.stats.beans = { k: 'beans_flood' }; toast('t_beans_float', null, '#ff9a6a'); }
+  if (!Net.isGuest()) {
+    if (c && c.landed && flooded(c) && G.rac.state !== 'play') { G.cupObj = null; wtoast('t_cup_float', null, '#9ad0ff'); }
+    if (flooded(G.groundCan)) { G.groundCan = null; G.stats.beans = { k: 'beans_flood' }; wtoast('t_beans_float', null, '#ff9a6a'); }
+  }
   for (const tt of G.toasts) tt.t += dt;
   G.toasts = G.toasts.filter(tt => tt.t < tt.dur);
 }
@@ -977,6 +1131,8 @@ function clockStr() {
 let endInfo = null;
 function endGame(won) {
   mode = won ? 'won' : 'lost';
+  Net.setPlaying(false); if (!won) Net.send({ t: 'froze' });
+  $('pause').classList.add('hidden');
   const p = G.p, s = G.stats;
   Sound.sting(won); Sound.setAmbience(0.2, 400, won ? 0 : G.storm, 0);
   let textK;
@@ -1001,6 +1157,17 @@ function renderEnd() {
 }
 
 // ---------- visual sync ----------
+function poseCowboy(cb, p, time) {
+  cb.g.position.set(p.x, groundH(p.x, p.z), p.z); cb.g.rotation.y = p.face;
+  const sw = p.moving ? Math.sin(p.walk) * (p.running ? 0.8 : 0.55) : 0;
+  cb.legL.rotation.x = sw; cb.legR.rotation.x = -sw; cb.armL.rotation.x = -sw * 0.8; cb.armR.rotation.x = sw * 0.8;
+  cb.body.position.y = p.crouch ? -0.45 : (p.moving ? Math.abs(Math.cos(p.walk)) * 0.04 : 0);
+  cb.body.rotation.x = p.crouch ? 0.25 : (p.running ? 0.12 : 0);
+  if (p.crouch && p.hat) { cb.armR.rotation.x = -2.6; }
+  const shiver = p.warmth < 30 ? (Math.random() - 0.5) * (30 - p.warmth) * 0.002 : 0; cb.body.position.x = shiver;
+  cb.hat.visible = p.hat; cb.blanket.visible = p.blanket;
+  cb.skirt.rotation.z = Math.sin(time * 3) * 0.03 * G.wind;
+}
 const skyCols = [new THREE.Color(), new THREE.Color(), new THREE.Color()];
 const tmpC = new THREE.Color(), tmpV = new THREE.Vector3();
 function syncVisuals(dt, time) {
@@ -1083,15 +1250,8 @@ function syncVisuals(dt, time) {
   washWater.material.color.set(G.flood.level > 0.5 ? 0x7a5a40 : 0x4a5058);
   grassU.uTime.value = time; grassU.uWind.value = G.wind;
   // cowboy
-  const cb = cowboy; cb.g.position.set(p.x, groundH(p.x, p.z), p.z); cb.g.rotation.y = p.face;
-  const sw = p.moving ? Math.sin(p.walk) * (p.running ? 0.8 : 0.55) : 0;
-  cb.legL.rotation.x = sw; cb.legR.rotation.x = -sw; cb.armL.rotation.x = -sw * 0.8; cb.armR.rotation.x = sw * 0.8;
-  cb.body.position.y = p.crouch ? -0.45 : (p.moving ? Math.abs(Math.cos(p.walk)) * 0.04 : 0);
-  cb.body.rotation.x = p.crouch ? 0.25 : (p.running ? 0.12 : 0);
-  if (p.crouch && p.hat) { cb.armR.rotation.x = -2.6; }
-  const shiver = p.warmth < 30 ? (Math.random() - 0.5) * (30 - p.warmth) * 0.002 : 0; cb.body.position.x = shiver;
-  cb.hat.visible = p.hat; cb.blanket.visible = p.blanket;
-  cb.skirt.rotation.z = Math.sin(time * 3) * 0.03 * G.wind;
+  poseCowboy(cowboy, p, time);
+  for (const r of remotes.values()) { r.cb.g.visible = r.playing && r.seen && mode !== 'title'; if (r.cb.g.visible) poseCowboy(r.cb, r, time); }
   // horse
   const h = G.horse; horseM.g.position.set(h.x, groundH(h.x, h.z), h.z);
   horseM.g.rotation.y = h.face;
@@ -1189,6 +1349,7 @@ function drawHUD(dt, acts) {
   if (G.hatObj && G.hatObj.landed) mk.push(['hat', 'marker_hat', G.hatObj.x, G.hatObj.z, 0.8, '#9ad0ff']);
   if (G.cupObj && G.cupObj.landed && dist(p, G.cupObj) > 3) mk.push(['cup', 'marker_cup', G.cupObj.x, G.cupObj.z, 0.6, '#c8e08a']);
   if (G.groundCan) mk.push(['beans', 'marker_beans', G.groundCan.x, G.groundCan.z, 0.6, '#ffd27a']);
+  for (const [id, r] of remotes) if (r.cb.g.visible) mk.push(['rider' + id, { raw: nameOf(id) + (r.warmth < 25 ? ' ❄' : '') }, r.x, r.z, 2.6, r.warmth < 25 ? '#9ad0ff' : '#ffe6b0']);
   const used = new Set(); let offL = 0, offR = 0;
   for (const [id, k, x, z, hgt, color] of mk) {
     used.add(id);
@@ -1202,7 +1363,7 @@ function drawHUD(dt, acts) {
       sx = side > 0 ? innerWidth - 110 : 110; sy = innerHeight * 0.4 + (side > 0 ? offR++ : offL++) * 26; arrow = side > 0 ? ' ▶' : '◀ ';
     }
     el.style.left = sx + 'px'; el.style.top = sy + 'px'; el.style.color = color; el.style.display = '';
-    const label = T(k) + ' · ' + T('meters', { n: Math.round(Math.hypot(x - p.x, z - p.z)) });
+    const label = (typeof k === 'string' ? T(k) : k.raw) + ' · ' + T('meters', { n: Math.round(Math.hypot(x - p.x, z - p.z)) });
     el.textContent = off ? (arrow === '◀ ' ? arrow + label : label + arrow) : '▼ ' + label;
   }
   for (const id in markerEls) if (!used.has(id)) markerEls[id].style.display = 'none';
@@ -1223,9 +1384,10 @@ document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement === canvas) hadLock = true;
   else if (hadLock && mode === 'play') { hadLock = false; pause(); }
 });
-function pause() { if (mode !== 'play') return; mode = 'paused'; hadLock = false; if (document.pointerLockElement) document.exitPointerLock(); $('pause').classList.remove('hidden'); Sound.setAmbience(0, 400, 0, 0); syncSettingsUI(); }
+function pause() { if (mode !== 'play') return; mode = 'paused'; $('mpPauseNote').classList.toggle('hidden', !Net.othersPlaying()); hadLock = false; if (document.pointerLockElement) document.exitPointerLock(); $('pause').classList.remove('hidden'); Sound.setAmbience(0, 400, 0, 0); syncSettingsUI(); }
 function resume() { if (mode !== 'paused') return; mode = 'play'; $('pause').classList.add('hidden'); last = performance.now(); canvas.click(); }
 addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'text') { if (e.code === 'Enter') { e.target.blur(); if (mode === 'title') startGame(); } return; }
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
   if (!keys[e.code]) pressed[e.code] = true;
   keys[e.code] = true;
@@ -1246,11 +1408,14 @@ function syncSettingsUI() { $('sens').value = SET.sens; $('vol').value = SET.vol
 $('sens').addEventListener('input', e => { SET.sens = parseFloat(e.target.value); saveSet(); });
 $('vol').addEventListener('input', e => { SET.vol = parseFloat(e.target.value); Sound.setVolume(SET.vol); saveSet(); });
 $('invertBtn').addEventListener('click', () => { SET.invert = !SET.invert; saveSet(); syncSettingsUI(); });
-I18N.listeners.push(() => { renderEnd(); syncSettingsUI(); });
+I18N.listeners.push(() => { renderEnd(); syncSettingsUI(); updateMpStatus(); });
 
 function startGame() {
   Sound.init(); Sound.setVolume(SET.vol); cam.dist = 6.5; perf.frames = 0; perf.time = 0;
-  newGame(); mode = 'play'; endInfo = null;
+  // the host restarting mid-night with friends still riding keeps the shared world
+  const keep = Net.online && !Net.isGuest() && Net.othersPlaying() && inGame() ? JSON.parse(JSON.stringify(worldSnap())) : null;
+  newGame(); mode = 'play'; endInfo = null; Net.setPlaying(true);
+  if (keep) { G.synced = true; G.seen = { fx: keep.fx, gs: keep.gs.state, fl: keep.fl.state }; for (const [b, at] of TIMED_BEATS) if (keep.T > at) G.beats[b] = true; restoreWorld(keep); }
   ['title', 'end', 'pause'].forEach(id => $(id).classList.add('hidden'));
   $('hud').classList.remove('hidden');
   if (!document.pointerLockElement) canvas.click();
@@ -1259,20 +1424,22 @@ function startGame() {
 // ---------- main loop ----------
 let last = performance.now(), clockT = 0, titleT = 0;
 const perf = { frames: 0, time: 0 };
-function frame(now) {
-  requestAnimationFrame(frame);
-  const rawDt = Math.min(0.25, (now - last) / 1000); last = now;
+function frame(now) { requestAnimationFrame(frame); tick(now, true); }
+function tick(now, visible) {
+  const rawDt = Math.min(visible ? 0.25 : 1, (now - last) / 1000); last = now;
   const vdt = Math.min(rawDt, 0.05);
   clockT += vdt;
-  if (mode === 'play') {
-    if (!lowApplied && perf.time < 6) { perf.frames++; perf.time += rawDt; if (perf.time >= 4 && perf.frames / perf.time < 24) applyLowQuality(); }
-    const simDt = rawDt * SPEED, steps = Math.max(1, Math.ceil(simDt / 0.05));
-    for (let i = 0; i < steps && mode === 'play'; i++) update(simDt / steps);
+  const shared = mode === 'paused' && Net.othersPlaying();
+  if (mode === 'play' || shared) {
+    if (mode === 'play' && !lowApplied && perf.time < 6) { perf.frames++; perf.time += rawDt; if (perf.time >= 4 && perf.frames / perf.time < 24) applyLowQuality(); }
+    const simDt = rawDt * (Net.others().length ? 1 : SPEED), steps = Math.max(1, Math.ceil(simDt / 0.05));
+    for (let i = 0; i < steps && inGame(); i++) update(simDt / steps);
+    updNet(rawDt);
     if (mode === 'play') {
       const acts = getActions();
       for (const k of ['E', 'F', 'Q']) if (pressed['Key' + k]) { const a = acts.filter(x => x.key === k && x.fn).sort((x, y) => x.d - y.d)[0]; if (a) a.fn(); }
-      updateCamera(vdt); syncVisuals(vdt, clockT); drawHUD(vdt, getActions());
-    }
+      if (visible) { updateCamera(vdt); syncVisuals(vdt, clockT); drawHUD(vdt, getActions()); }
+    } else if (visible) { updateCamera(vdt); syncVisuals(vdt, clockT); }
   } else if (mode === 'title') {
     titleT += vdt;
     G.t = 25 + Math.sin(titleT * 0.05) * 10;
@@ -1281,19 +1448,28 @@ function frame(now) {
     updateCamera(vdt); syncVisuals(vdt, clockT);
   } else if (mode === 'won') {
     if (G.t < 590) { G.t += vdt * 4; G.storm = 0; G.night = Math.max(0, G.night - vdt); G.flood.level *= 0.98; }
-    updateCamera(vdt); syncVisuals(vdt, clockT);
+    updNet(rawDt); updateCamera(vdt); syncVisuals(vdt, clockT);
   } else if (mode === 'lost' || mode === 'paused') {
     if (mode === 'lost') cam.yaw += vdt * 0.05;
-    updateCamera(vdt); syncVisuals(vdt * (mode === 'paused' ? 0 : 1), clockT);
+    updNet(rawDt); updateCamera(vdt); syncVisuals(vdt * (mode === 'paused' ? 0 : 1), clockT);
   }
   for (const k in pressed) delete pressed[k];
-  renderer.render(scene, camera);
+  if (visible) renderer.render(scene, camera);
 }
+// browsers stop animation frames in hidden tabs; keep a shared night running anyway
+setInterval(() => { if (document.hidden && Net.online) tick(performance.now(), false); }, 250);
 
 // test hook for automated checks (harmless in normal play)
-window.__beans = { sources: () => woodSources.filter(w => w.n > 0).map(w => ({ x: w.x, z: w.z, kind: w.kind })).concat(wagon.searched && wagon.boards > 0 ? [{ x: WAGON.x - 2.5, z: WAGON.z + 1.5, kind: 'dry' }] : []), get G() { return G; }, get mode() { return mode; }, start: startGame, cam, keys, actions: () => getActions().map(a => ({ key: a.key, k: a.m.k, ok: !!a.fn, d: a.d })), act: k => { const a = getActions().filter(x => x.key === k && x.fn).sort((x, y) => x.d - y.d)[0]; if (a) { a.fn(); return a.m.k; } return null; }, setLang: l => I18N.set(l), terrainInfo, CAMP, WAGON, OVERHANG, washX };
+window.__beans = { sources: () => woodSources.filter(w => w.n > 0).map(w => ({ x: w.x, z: w.z, kind: w.kind })).concat(wagon.searched && wagon.boards > 0 ? [{ x: WAGON.x - 2.5, z: WAGON.z + 1.5, kind: 'dry' }] : []), get G() { return G; }, get mode() { return mode; }, start: startGame, cam, keys, actions: () => getActions().map(a => ({ key: a.key, k: a.m.k, ok: !!a.fn, d: a.d })), act: k => { const a = getActions().filter(x => x.key === k && x.fn).sort((x, y) => x.d - y.d)[0]; if (a) { a.fn(); return a.m.k; } return null; }, setLang: l => I18N.set(l), net: Net, remotes, terrainInfo, CAMP, WAGON, OVERHANG, washX };
 
 newGame(); G.toasts = [];
 mode = 'title'; $('loading').classList.add('hidden');
 I18N.apply(); syncSettingsUI();
+{ // rider name, remembered like the language
+  let n = ''; try { n = localStorage.getItem('lastcan.name') || ''; } catch (e) { /* storage blocked */ }
+  if (!n) n = 'Cowboy ' + Math.floor(10 + Math.random() * 90);
+  Net.name = n; $('mpName').value = n;
+  $('mpName').addEventListener('change', e => { const v = e.target.value.trim().slice(0, 16) || Net.name; e.target.value = v; Net.setName(v); try { localStorage.setItem('lastcan.name', v); } catch (err) { /* ignore */ } });
+}
+updateMpStatus(); Net.connect();
 requestAnimationFrame(frame);

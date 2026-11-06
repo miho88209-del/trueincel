@@ -16,18 +16,48 @@ cd trueincel
 python3 -m http.server 8000
 ```
 
-If you already have the folder, just run the last command from inside it. Or use the included script, which does the same thing:
-
-```bash
-./start.sh
-```
+If you already have the folder, just run the last command from inside it.
 
 Then open **http://localhost:8000/** in an up-to-date Chrome/Chromium or Firefox. Click **Ride**, or press **Enter**.
 
-- If port 8000 is taken, use another one: `python3 -m http.server 8080` (or `PORT=8080 ./start.sh`), then open `http://localhost:8080/`.
+- If port 8000 is taken, use another one: `python3 -m http.server 8080`, then open `http://localhost:8080/`.
 - If `localhost` doesn't resolve on your system, use `http://127.0.0.1:8000/`.
 - Opening `index.html` directly as a file will **not** work, because browsers block ES modules from `file://`. Use the server.
 - Stop the server with **Ctrl+C**.
+
+## Multiplayer (ride with a friend)
+
+One player hosts. The host clones the game and starts the multiplayer server instead of `http.server`:
+
+```bash
+git clone -b hoplite/tenos-e3cc2bbf https://github.com/miho88209-del/trueincel.git
+cd trueincel
+python3 server.py
+```
+
+(`./start.sh` does the same.) It needs nothing but Python 3, and prints two addresses:
+
+```
+  You:                    http://localhost:8000/
+  Friends on your network: http://192.168.1.23:8000/
+```
+
+- **Host:** open `http://localhost:8000/`.
+- **Friend:** open the "Friends on your network" address in Chrome/Chromium or Firefox on their Linux PC. They don't need to download or install anything.
+- Both of you type a name on the title screen and click **Ride**. The first rider hosts the night; anyone who joins later drops into the same night.
+
+**What you share:** the clock and the storm, the campfire (fuel, canvas, beans on the fire), firewood, cactus pears, the wagon's loot, Biscuit, the raccoon, and the thrown cup. **What's yours:** warmth, belly, dryness, your hat, and what you carry. You see each other's cowboys with name tags (a ❄ means your friend is freezing).
+
+- If you freeze, your friend keeps playing. Press **R** to ride back into the same night. If the host freezes or leaves, the other rider takes over the world automatically.
+- Pausing doesn't stop the night in multiplayer.
+- Keep the game tab open while you play. Minimizing the host's browser can slow the night for everyone.
+
+**Friend not on the same network?** The host's computer has to be reachable from the friend's computer:
+
+- **Easiest:** install [Tailscale](https://tailscale.com/download/linux) (or ZeroTier) on both PCs and join the same network. The friend then opens `http://<host's Tailscale IP>:8000/`.
+- **Or:** forward TCP port 8000 on the host's router to the host's PC, then give the friend `http://<your public IP>:8000/`. Stop the server (**Ctrl+C**) when you're done: anyone who can reach that port can join.
+
+If the friend can't connect on the same network, the host's firewall may be blocking the port. On Ubuntu, run `sudo ufw allow 8000/tcp`. To use another port, run `python3 server.py 8080`. The server only shares the game folder, and hidden files such as `.git` are never served.
 
 ## Controls
 
@@ -89,7 +119,9 @@ js/audio.js       procedural sound (wind, rain, fire, thunder, guitar, toots)
 js/i18n.js        language runtime (stores your choice in localStorage)
 js/lang/*.js      English, French, Russian strings
 vendor/           Three.js r187 (MIT, see vendor/THREE_LICENSE)
-start.sh          convenience launcher (python3 -m http.server)
+server.py         game server with multiplayer (Python 3 standard library only)
+start.sh          launcher for server.py
+js/net.js         multiplayer connection (stays solo without server.py)
 ```
 
 Testing hook: append `?speed=10` to the URL to run the night faster.
