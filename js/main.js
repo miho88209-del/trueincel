@@ -94,6 +94,12 @@ const flameTex = texFromCanvas(64, 128, (g) => {
   g.fillStyle = gr; g.beginPath(); g.moveTo(32, 2); g.bezierCurveTo(58, 50, 62, 90, 32, 126); g.bezierCurveTo(2, 90, 6, 50, 32, 2); g.fill();
 });
 
+  // worn trails: camp -> east trail -> wagon, camp -> overhang, overhang -> west side
+const TRAILS = [[[5, 40], [20, 30], [36, 12], [38, -10], [34, -32], [18, -50], [10, -56]], [[5, 40], [-15, 32], [-38, 17]], [[-38, 17], [-38, -10], [-30, -40], [2, -58]]];
+const trailDist = (x, z) => { let best = 1e9; for (const L of TRAILS) for (let i = 0; i < L.length - 1; i++) {
+  const [ax, az] = L[i], [bx, bz] = L[i + 1], vx = bx - ax, vz = bz - az, t = clamp(((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz), 0, 1);
+  best = Math.min(best, Math.hypot(x - ax - vx * t, z - az - vz * t)); } return best; };
+
 // ---------- terrain ----------
 const colliders = []; // {x, z, r}
 let terrainMat;
@@ -106,13 +112,16 @@ let terrainMat;
   g.computeVertexNormals();
   const nor = g.attributes.normal, col = new Float32Array(n * 3);
   const strata = ['#8e3b25', '#b5532f', '#c9774a', '#9e4229', '#d8a070', '#7a3020', '#b8603a', '#a34a2c'].map(c => new THREE.Color(c));
-  const floorA = new THREE.Color('#8a4c32'), floorB = new THREE.Color('#b0724a'), washC = new THREE.Color('#a8917a'), top = new THREE.Color('#8c5a3c');
+  const floorA = new THREE.Color('#7e5038'), floorB = new THREE.Color('#a8785a'), washC = new THREE.Color('#b0a08c'), top = new THREE.Color('#8c5a3c'), trailC = new THREE.Color('#c4a07c');
+
   const c = new THREE.Color();
   for (let i = 0; i < n; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), t = info[i], ny = nor.getY(i);
     if (t.wall < 1.2) {
       c.copy(floorA).lerp(floorB, 0.5 + 0.5 * fbm(x * 0.08, z * 0.08, 3));
       c.lerp(washC, clamp(t.wash * 1.1, 0, 1));
+      const td = trailDist(x, z) + vnoise(x * 0.5, z * 0.5) * 0.6;
+      if (td < 2.2) c.lerp(trailC, (1 - smooth(0.9, 2.2, td)) * 0.75);
     } else {
       const band = Math.floor((y + fbm(x * 0.05, z * 0.05, 2) * 2.5) / 1.7);
       c.copy(strata[((band % strata.length) + strata.length) % strata.length]);
@@ -252,7 +261,7 @@ const grassU = { uTime: { value: 0 }, uWind: { value: 0.3 } };
   while (k < N && tries < N * 6) {
     tries++;
     const x = rand(-48, 48), z = rand(-78, 62); const t = terrainInfo(x, z);
-    if (t.wall > 0.15 || t.wash > 0.3 || Math.hypot(x - CAMP.x, z - CAMP.z) < 3.5) continue;
+    if (t.wall > 0.15 || t.wash > 0.3 || Math.hypot(x - CAMP.x, z - CAMP.z) < 3.5 || trailDist(x, z) < 1.3) continue;
     if (fbm(x * 0.07 + 40, z * 0.07, 2) < -0.15) continue; // patchy
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * 6.28); const s = 0.7 + Math.random() * 0.9;
     m4.compose(p3.set(x, t.h - 0.02, z), q, s3.set(s, s, s)); inst.setMatrixAt(k++, m4);
@@ -1017,8 +1026,8 @@ function syncVisuals(dt, time) {
   sun.position.set(p.x + sunDir.x * 120, groundH(p.x, p.z) + Math.max(sunDir.y, 0.08) * 120, p.z + sunDir.z * 120);
   sun.target.position.set(p.x, groundH(p.x, p.z), p.z);
   moon.intensity = 0.35 * G.night * (1 - G.storm * 0.4) + G.flash * 3;
-  hemi.intensity = 0.25 + 0.95 * Math.max(dusk, dawn) + G.flash * 2.5;
-  hemi.color.copy(skyCols[1]).lerp(tmpC.set(0x8090c0), 0.3); hemi.groundColor.set(0x5a3020).lerp(tmpC.set(0x141018), 1 - Math.max(dusk, dawn));
+  hemi.intensity = 0.3 + 1.5 * Math.max(dusk, dawn) + G.flash * 2.5;
+  hemi.color.copy(skyCols[1]).lerp(tmpC.set(0xa0a8d0), 0.35); hemi.groundColor.set(0x7a4a30).lerp(tmpC.set(0x141018), 1 - Math.max(dusk, dawn));
   renderer.toneMappingExposure = 1.15 + G.night * 0.3;
   // fog: haze at dusk, rain wall at night
   scene.fog.color.copy(skyCols[2]).lerp(tmpC.set(0x0c0e16), G.storm * 0.4);
@@ -1109,7 +1118,8 @@ function syncVisuals(dt, time) {
 
 function updateCamera(dt) {
   const p = G.p;
-  const tx = p.x, tz = p.z, ty = groundH(p.x, p.z) + (p.crouch ? 1.15 : 1.7);
+  // over-the-shoulder offset so the cowboy doesn't block what you're walking toward
+  const tx = p.x - Math.cos(cam.yaw) * 0.6, tz = p.z + Math.sin(cam.yaw) * 0.6, ty = groundH(p.x, p.z) + (p.crouch ? 1.15 : 1.75);
   const cp = Math.cos(cam.pitch);
   const dx = Math.sin(cam.yaw) * cp, dy = Math.sin(cam.pitch), dz = Math.cos(cam.yaw) * cp;
   // pull in when the canyon wall is between camera and cowboy
